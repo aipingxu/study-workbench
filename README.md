@@ -9,6 +9,7 @@
 | `main` | 项目主页 | README + 项目说明 |
 | `primary-study` | 小学四升五学习台 | 沪教版教材，语数英三科，每日打卡，移动端优先 |
 | `business-english` | 商务英语×临床系统英语学习台 | 零基础成人英语，口语+词汇，12周课程体系 |
+| `auto-claim` | WorkBuddy 每日积分自动领取工具 | Playwright + Windows 任务计划，不依赖客户端 |
 
 ## 技术栈
 
@@ -41,6 +42,14 @@
 - 三阶段：基础英语 → 商务沟通 → 临床研究/系统验证专业英语
 - 功能：TTS朗读、闪卡翻转、计时器、打卡统计、数据导出
 - 配色：Teal(#0F766E) + Amber(#F59E0B)
+
+### auto-claim（WorkBuddy 每日积分自动领取工具）
+- 功能：每天自动领取 WorkBuddy 100 积分，不依赖客户端运行
+- 技术方案：Playwright 持久化上下文 + API 调用 + Windows 任务计划
+- API：`POST /billing/meter/claim-gift`
+- 首次使用：`python claim_credits.py --login` 手动登录
+- 日常运行：Windows 任务计划每天 09:00 自动执行
+- 文件：`claim_credits.py`（领取脚本）、`setup_task.bat`（一键安装定时任务）
 
 ## 部署
 
