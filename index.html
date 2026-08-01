@@ -1,0 +1,1727 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="英语学习台">
+<meta name="theme-color" content="#0F766E">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+--pri:#0F766E;--pri-l:#CCFBF1;--pri-d:#134E4A;
+--acc:#F59E0B;--acc-l:#FEF3C7;--acc-d:#92400E;
+--slate:#475569;--slate-l:#F1F5F9;--slate-d:#1E293B;
+--red:#EF4444;--grn:#22C55E;--bg:#F8FAFC;--card:#fff;
+--rd:12px;--sh:0 1px 3px rgba(0,0,0,.08);--sh2:0 4px 12px rgba(0,0,0,.1);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--slate-d);line-height:1.6;max-width:520px;margin:0 auto;min-height:100vh;padding-bottom:70px}
+h1,h2,h3{font-weight:700;line-height:1.3}
+.muted{color:var(--slate);font-size:13px}
+.hidden{display:none!important}
+/* Tab Bar */
+.tabbar{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:520px;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-top:1px solid rgba(0,0,0,.06);display:flex;justify-content:space-around;align-items:center;padding:8px 0 calc(8px + env(safe-area-inset-bottom));z-index:100}
+.tab{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;color:var(--slate);cursor:pointer;transition:.2s;padding:4px 12px;border-radius:8px}
+.tab.active{color:var(--pri)}
+.tab-ic{font-size:20px}
+/* Pages */
+.page{display:none;padding:16px;animation:fade .3s}
+.page.active{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+/* Header */
+.hdr{background:linear-gradient(135deg,var(--pri),var(--pri-d));color:#fff;padding:20px 16px;border-radius:var(--rd);margin-bottom:16px;position:relative;overflow:hidden}
+.hdr::after{content:'';position:absolute;top:-20px;right:-20px;width:100px;height:100px;background:rgba(255,255,255,.08);border-radius:50%}
+.hdr h1{font-size:20px;margin-bottom:4px}
+.hdr p{font-size:13px;opacity:.85}
+.streak-badge{position:absolute;top:16px;right:16px;background:rgba(255,255,255,.2);padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600}
+/* Cards */
+.card{background:var(--card);border-radius:var(--rd);box-shadow:var(--sh);padding:16px;margin-bottom:12px}
+.card-tap{cursor:pointer;transition:.2s}
+.card-tap:active{transform:scale(.98)}
+.sec-title{font-size:15px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.sec-title .dot{width:4px;height:16px;background:var(--pri);border-radius:2px}
+/* Progress bar */
+.pbar{height:6px;background:var(--slate-l);border-radius:3px;overflow:hidden;margin-top:8px}
+.pbar-fill{height:100%;background:linear-gradient(90deg,var(--pri),var(--acc));border-radius:3px;transition:.5s}
+/* Timer card */
+.timer-card{background:linear-gradient(135deg,var(--pri),var(--pri-d));color:#fff;text-align:center;padding:24px 16px}
+.timer-display{font-size:48px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:2px;margin:8px 0}
+.timer-label{font-size:14px;opacity:.85}
+.timer-btns{display:flex;gap:12px;justify-content:center;margin-top:16px}
+.timer-btn{background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.3);color:#fff;padding:8px 20px;border-radius:20px;font-size:14px;font-weight:600;cursor:pointer;transition:.2s}
+.timer-btn:active{background:rgba(255,255,255,.3)}
+.timer-btn.active{background:var(--acc);border-color:var(--acc)}
+/* Lesson item */
+.lesson-item{display:flex;align-items:center;gap:12px;padding:14px;background:var(--card);border-radius:var(--rd);box-shadow:var(--sh);margin-bottom:8px;cursor:pointer;transition:.2s}
+.lesson-item:active{transform:scale(.98)}
+.lesson-item.locked{opacity:.5;cursor:not-allowed}
+.lesson-item.done{border-left:3px solid var(--grn)}
+.lesson-num{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0;background:var(--pri-l);color:var(--pri)}
+.lesson-item.done .lesson-num{background:var(--grn);color:#fff}
+.lesson-item.locked .lesson-num{background:var(--slate-l);color:var(--slate)}
+.lesson-info{flex:1;min-width:0}
+.lesson-info .t{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lesson-info .d{font-size:12px;color:var(--slate)}
+.lesson-status{font-size:18px}
+/* Phrase card */
+.phrase-card{background:var(--card);border-radius:var(--rd);box-shadow:var(--sh);padding:16px;margin-bottom:10px;border-left:3px solid var(--pri)}
+.phrase-en{font-size:17px;font-weight:700;color:var(--slate-d);margin-bottom:4px}
+.phrase-cn{font-size:14px;color:var(--slate)}
+.phrase-actions{display:flex;gap:8px;margin-top:10px}
+.mini-btn{padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:none;transition:.2s}
+.mini-btn.speak{background:var(--pri-l);color:var(--pri)}
+.mini-btn.speak:active{background:var(--pri);color:#fff}
+.mini-btn.video{background:var(--acc-l);color:var(--acc-d)}
+.mini-btn.video:active{opacity:.7}
+/* Flashcard */
+.flashcard-container{perspective:1000px;margin:0 auto 20px}
+.flashcard{width:100%;max-width:400px;height:240px;position:relative;transition:transform .6s;transform-style:preserve-3d;cursor:pointer;margin:0 auto}
+.flashcard.flipped{transform:rotateY(180deg)}
+.flashcard-face{position:absolute;width:100%;height:100%;backface-visibility:hidden;-webkit-backface-visibility:hidden;border-radius:16px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;box-shadow:var(--sh2)}
+.flashcard-front{background:linear-gradient(135deg,var(--pri),var(--pri-d));color:#fff}
+.flashcard-back{background:#fff;border:2px solid var(--pri-l);transform:rotateY(180deg)}
+.flashcard-word{font-size:28px;font-weight:800;text-align:center}
+.flashcard-phonetic{font-size:14px;opacity:.8;margin-top:8px}
+.flashcard-meaning{font-size:18px;font-weight:700;color:var(--slate-d);text-align:center}
+.flashcard-example{font-size:13px;color:var(--slate);margin-top:12px;text-align:center;font-style:italic}
+.flashcard-hint{font-size:11px;opacity:.6;margin-top:auto;position:absolute;bottom:12px}
+/* Vocab list */
+.vocab-item{display:flex;align-items:center;gap:12px;padding:12px;background:var(--card);border-radius:var(--rd);box-shadow:var(--sh);margin-bottom:8px}
+.vocab-word{font-size:15px;font-weight:700;flex:1}
+.vocab-word .ph{font-size:12px;color:var(--slate);font-weight:400;margin-left:6px}
+.vocab-meaning{font-size:13px;color:var(--slate)}
+.vocab-status{font-size:18px}
+/* Buttons */
+.btn{display:block;width:100%;padding:14px;border-radius:var(--rd);font-size:15px;font-weight:700;text-align:center;cursor:pointer;border:none;transition:.2s}
+.btn-primary{background:var(--pri);color:#fff}
+.btn-primary:active{background:var(--pri-d)}
+.btn-amber{background:var(--acc);color:#fff}
+.btn-amber:active{opacity:.85}
+.btn-outline{background:transparent;border:2px solid var(--pri);color:var(--pri)}
+.btn-grn{background:var(--grn);color:#fff}
+.btn-red{background:var(--red);color:#fff}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+/* Checkin */
+.checkin-box{text-align:center;padding:30px 16px}
+.checkin-circle{width:80px;height:80px;border-radius:50%;background:var(--grn);color:#fff;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 16px;animation:pop .4s}
+@keyframes pop{0%{transform:scale(0)}60%{transform:scale(1.1)}100%{transform:scale(1)}}
+/* Stats */
+.stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.stat-box{background:var(--card);border-radius:var(--rd);box-shadow:var(--sh);padding:16px;text-align:center}
+.stat-num{font-size:28px;font-weight:800;color:var(--pri)}
+.stat-label{font-size:12px;color:var(--slate);margin-top:4px}
+.chart-wrap{background:var(--card);border-radius:var(--rd);box-shadow:var(--sh);padding:16px;margin-bottom:12px}
+.chart-wrap h3{font-size:14px;margin-bottom:12px}
+/* Menu */
+.menu-item{display:flex;align-items:center;gap:12px;padding:14px;background:var(--card);border-radius:var(--rd);box-shadow:var(--sh);margin-bottom:8px;cursor:pointer;transition:.2s}
+.menu-item:active{background:var(--slate-l)}
+.menu-icon{font-size:20px;width:28px;text-align:center}
+.menu-text{flex:1;font-size:14px;font-weight:600}
+.menu-arrow{color:var(--slate);font-size:18px}
+/* Modal */
+.modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5);z-index:200;display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.show{display:flex;animation:fade .2s}
+.modal{background:#fff;width:100%;max-width:520px;border-radius:20px 20px 0 0;padding:20px 16px calc(20px + env(safe-area-inset-bottom));max-height:85vh;overflow-y:auto;animation:slideup .3s}
+@keyframes slideup{from{transform:translateY(100%)}to{transform:none}}
+.modal-title{font-size:18px;font-weight:700;margin-bottom:16px;text-align:center}
+.modal-close{position:absolute;top:12px;right:16px;font-size:22px;color:var(--slate);cursor:pointer}
+/* Toast */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:var(--slate-d);color:#fff;padding:10px 24px;border-radius:20px;font-size:14px;z-index:300;opacity:0;transition:.3s;pointer-events:none}
+.toast.show{opacity:1;bottom:100px}
+/* Confetti */
+.confetti{position:fixed;width:10px;height:10px;z-index:250;pointer-events:none;animation:fall 3s ease-in forwards}
+@keyframes fall{to{transform:translateY(100vh) rotate(720deg);opacity:0}}
+/* Week selector */
+.week-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:8px;margin-bottom:12px;-webkit-overflow-scrolling:touch}
+.week-tab{flex-shrink:0;padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;background:var(--slate-l);color:var(--slate);cursor:pointer;transition:.2s;white-space:nowrap}
+.week-tab.active{background:var(--pri);color:#fff}
+.week-tab.locked{opacity:.5}
+/* Phase tag */
+.phase-tag{display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:600;margin-bottom:8px}
+.phase-1{background:#DBEAFE;color:#1E40AF}
+.phase-2{background:var(--acc-l);color:var(--acc-d)}
+.phase-3{background:#E0E7FF;color:#3730A3}
+/* Responsive desktop */
+@media(min-width:600px){
+body{box-shadow:0 0 20px rgba(0,0,0,.05);min-height:100vh}
+}
+</style>
+</head>
+<body>
+<!-- Today Page -->
+<div class="page active" id="page-today">
+<div class="hdr" id="todayHeader">
+<div class="streak-badge" id="streakBadge">🔥 0天</div>
+<h1>今日学习</h1>
+<p id="todayDate">加载中...</p>
+</div>
+<div id="checkinArea"></div>
+<div class="card" id="todaySpeaking">
+<div class="sec-title"><span class="dot"></span>🎤 口语任务 · 20分钟</div>
+<div id="todaySpeakingContent"></div>
+</div>
+<div class="card" id="todayVocab">
+<div class="sec-title"><span class="dot" style="background:var(--acc)"></span>📚 词汇任务 · 15分钟</div>
+<div id="todayVocabContent"></div>
+</div>
+<div class="card">
+<div class="sec-title"><span class="dot" style="background:var(--grn)"></span>📊 今日进度</div>
+<div id="todayProgress"></div>
+</div>
+</div>
+
+<!-- Speaking Page -->
+<div class="page" id="page-speaking">
+<div class="hdr">
+<h1>口语训练</h1>
+<p>每天20分钟 · 循序渐进 · 从零开始</p>
+</div>
+<div class="week-tabs" id="speakingWeekTabs"></div>
+<div id="speakingLessons"></div>
+</div>
+
+<!-- Vocab Page -->
+<div class="page" id="page-vocab">
+<div class="hdr" style="background:linear-gradient(135deg,var(--acc),var(--acc-d))">
+<h1>词汇积累</h1>
+<p>每天15分钟 · 闪卡记忆 · 间隔复习</p>
+</div>
+<div class="week-tabs" id="vocabWeekTabs"></div>
+<div id="vocabLessons"></div>
+</div>
+
+<!-- Stats Page -->
+<div class="page" id="page-stats">
+<div class="hdr" style="background:linear-gradient(135deg,var(--slate-d),var(--slate))">
+<h1>学习统计</h1>
+<p>坚持就是胜利 💪</p>
+</div>
+<div class="stat-grid">
+<div class="stat-box"><div class="stat-num" id="statDays">0</div><div class="stat-label">累计打卡天数</div></div>
+<div class="stat-box"><div class="stat-num" id="statLessons">0</div><div class="stat-label">完成课程数</div></div>
+<div class="stat-box"><div class="stat-num" id="statWords">0</div><div class="stat-label">掌握单词数</div></div>
+<div class="stat-box"><div class="stat-num" id="statMinutes">0</div><div class="stat-label">学习总时长(分)</div></div>
+</div>
+<div class="chart-wrap"><h3>📅 近7天打卡</h3><canvas id="chart7days" height="80"></canvas></div>
+<div class="chart-wrap"><h3>📊 口语vs词汇进度</h3><canvas id="chartProgress" height="120"></canvas></div>
+<div class="chart-wrap"><h3>🎯 学习方式分布</h3><canvas id="chartType" height="120"></canvas></div>
+</div>
+
+<!-- My Page -->
+<div class="page" id="page-my">
+<div class="hdr" style="background:linear-gradient(135deg,#6366F1,#4F46E5)">
+<h1>我的</h1>
+<p>商务英语 × 临床系统英语</p>
+</div>
+<div class="card">
+<div class="sec-title"><span class="dot"></span>学习目标</div>
+<div id="goalDisplay"></div>
+</div>
+<div class="menu-item" onclick="exportData()"><span class="menu-icon">📥</span><span class="menu-text">导出数据</span><span class="menu-arrow">›</span></div>
+<div class="menu-item" onclick="document.getElementById('importFile').click()"><span class="menu-icon">📤</span><span class="menu-text">导入数据</span><span class="menu-arrow">›</span></div>
+<input type="file" id="importFile" accept=".json" class="hidden" onchange="importData(event)">
+<div class="menu-item" onclick="showInstallGuide()"><span class="menu-icon">📱</span><span class="menu-text">添加到手机桌面</span><span class="menu-arrow">›</span></div>
+<div class="menu-item" onclick="resetData()"><span class="menu-icon">🗑️</span><span class="menu-text">重置数据</span><span class="menu-arrow">›</span></div>
+<div class="menu-item" onclick="toast('版本 v1.0 · 2026-08-01')"><span class="menu-icon">ℹ️</span><span class="menu-text">关于</span><span class="menu-arrow">›</span></div>
+</div>
+
+<!-- Tab Bar -->
+<div class="tabbar">
+<div class="tab active" onclick="switchTab('today')"><span class="tab-ic">🏠</span>今日</div>
+<div class="tab" onclick="switchTab('speaking')"><span class="tab-ic">🎤</span>口语</div>
+<div class="tab" onclick="switchTab('vocab')"><span class="tab-ic">📚</span>词汇</div>
+<div class="tab" onclick="switchTab('stats')"><span class="tab-ic">📊</span>统计</div>
+<div class="tab" onclick="switchTab('my')"><span class="tab-ic">👤</span>我的</div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+<div class="modal" id="modalContent">
+<span class="modal-close" onclick="closeModal()">✕</span>
+<div id="modalBody"></div>
+</div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ COURSE DATA ============
+const SPEAKING_WEEKS = [
+ {n:'第1周',t:'生存英语·问候与自我介绍',p:1},
+ {n:'第2周',t:'数字·时间与日期',p:1},
+ {n:'第3周',t:'日常交流基础',p:1},
+ {n:'第4周',t:'职场入门',p:1},
+ {n:'第5周',t:'办公沟通',p:2},
+ {n:'第6周',t:'会议英语',p:2},
+ {n:'第7周',t:'演讲与展示',p:2},
+ {n:'第8周',t:'商务社交',p:2},
+ {n:'第9周',t:'商务讨论与谈判',p:3},
+ {n:'第10周',t:'临床研究英语',p:3},
+ {n:'第11周',t:'系统验证英语',p:3},
+ {n:'第12周',t:'综合商务场景',p:3}
+];
+const SPEAKING_LESSONS = [
+ // Week 1
+ {id:'S01',w:0,t:'Hello & Goodbye',d:'基础问候语',ph:[{en:'Hello!',cn:'你好！'},{en:'Hi!',cn:'嗨！'},{en:'Good morning.',cn:'早上好。'},{en:'Good afternoon.',cn:'下午好。'},{en:'Goodbye!',cn:'再见！'},{en:'See you later.',cn:'回头见。'}],vid:'英语口语 hello goodbye 基础问候'},
+ {id:'S02',w:0,t:'Nice to meet you',d:'自我介绍',ph:[{en:'My name is Li Ming.',cn:'我叫李明。'},{en:'Nice to meet you.',cn:'很高兴认识你。'},{en:'Nice to meet you, too.',cn:'我也很高兴认识你。'},{en:'How do you do?',cn:'你好（正式）'},{en:'Let me introduce myself.',cn:'让我自我介绍一下。'}],vid:'英语自我介绍 nice to meet you'},
+ {id:'S03',w:0,t:'How are you?',d:'寒暄问候',ph:[{en:'How are you?',cn:'你好吗？'},{en:'I am fine, thank you.',cn:'我很好，谢谢。'},{en:'Not bad.',cn:'还不错。'},{en:'How about you?',cn:'你呢？'},{en:'I am doing great.',cn:'我挺好的。'}],vid:'英语口语 how are you 寒暄'},
+ {id:'S04',w:0,t:'Where are you from?',d:'国籍与家乡',ph:[{en:'Where are you from?',cn:'你来自哪里？'},{en:'I am from Shanghai.',cn:'我来自上海。'},{en:'I am Chinese.',cn:'我是中国人。'},{en:'Where do you live?',cn:'你住在哪里？'},{en:'I live in Shanghai.',cn:'我住在上海。'}],vid:'英语口语 where are you from 国籍'},
+ {id:'S05',w:0,t:'本周复习·情景对话',d:'综合练习',ph:[{en:'Hello, my name is Li Ming.',cn:'你好，我叫李明。'},{en:'Nice to meet you. Where are you from?',cn:'很高兴认识你。你来自哪里？'},{en:'I am from Shanghai. How are you?',cn:'我来自上海。你好吗？'},{en:'I am great, thank you!',cn:'我挺好的，谢谢！'}],vid:'英语口语入门 情景对话 复习'},
+ // Week 2
+ {id:'S06',w:1,t:'Numbers 1-100',d:'数字表达',ph:[{en:'one, two, three',cn:'一、二、三'},{en:'ten, twenty, thirty',cn:'十、二十、三十'},{en:'one hundred',cn:'一百'},{en:'first, second, third',cn:'第一、第二、第三'},{en:'How many?',cn:'多少个？'}],vid:'英语数字 1到100 发音教学'},
+ {id:'S07',w:1,t:'What time is it?',d:'时间表达',ph:[{en:'What time is it?',cn:'现在几点？'},{en:'It is nine o\'clock.',cn:'九点钟。'},{en:'It is half past ten.',cn:'十点半。'},{en:'It is a quarter past three.',cn:'三点十五分。'},{en:'What time shall we meet?',cn:'我们几点见面？'}],vid:'英语时间表达 what time is it'},
+ {id:'S08',w:1,t:'Days & Months',d:'日期表达',ph:[{en:'Monday, Tuesday, Wednesday',cn:'周一、周二、周三'},{en:'January, February, March',cn:'一月、二月、三月'},{en:'today, tomorrow, yesterday',cn:'今天、明天、昨天'},{en:'next week',cn:'下周'},{en:'What day is today?',cn:'今天星期几？'}],vid:'英语星期月份 days months 教学版权'},
+ {id:'S09',w:1,t:'Asking about Dates',d:'询问日期',ph:[{en:'What is the date today?',cn:'今天几号？'},{en:'Today is August 1st.',cn:'今天八月一日。'},{en:'When is the meeting?',cn:'会议什么时候？'},{en:'The meeting is on Friday.',cn:'会议在周五。'},{en:'How long does it take?',cn:'需要多长时间？'}],vid:'英语日期表达 asking about dates'},
+ {id:'S10',w:1,t:'本周复习·数字与时间',d:'综合练习',ph:[{en:'What time is it? It is ten o\'clock.',cn:'现在几点？十点钟。'},{en:'What day is today? Today is Monday.',cn:'今天星期几？今天周一。'},{en:'The meeting is on Friday at 2 PM.',cn:'会议在周五下午两点。'}],vid:'英语数字时间 复习 情景对话'},
+ // Week 3
+ {id:'S11',w:2,t:'Thank you & Sorry',d:'感谢与道歉',ph:[{en:'Thank you very much.',cn:'非常感谢。'},{en:'You are welcome.',cn:'不客气。'},{en:'I am sorry.',cn:'对不起。'},{en:'That is okay.',cn:'没关系。'},{en:'Excuse me.',cn:'打扰一下/劳驾。'}],vid:'英语口语 thank you sorry 道歉感谢'},
+ {id:'S12',w:2,t:'Can you help me?',d:'请求帮助',ph:[{en:'Can you help me?',cn:'你能帮我吗？'},{en:'Sure, what do you need?',cn:'当然，你需要什么？'},{en:'Could you please...?',cn:'能不能请你...？'},{en:'No problem.',cn:'没问题。'},{en:'Let me help you.',cn:'让我帮你。'}],vid:'英语口语 can you help me 请求帮助'},
+ {id:'S13',w:2,t:'I like / I do not like',d:'表达喜好',ph:[{en:'I like coffee.',cn:'我喜欢咖啡。'},{en:'I do not like tea.',cn:'我不喜欢茶。'},{en:'I love reading.',cn:'我热爱阅读。'},{en:'I prefer tea.',cn:'我更偏好茶。'},{en:'What do you like?',cn:'你喜欢什么？'}],vid:'英语口语 I like I dont like 喜好'},
+ {id:'S14',w:2,t:'Can / Cannot',d:'能力与请求',ph:[{en:'I can speak English.',cn:'我会说英语。'},{en:'I cannot drive.',cn:'我不会开车。'},{en:'Can I borrow your pen?',cn:'能借你的笔吗？'},{en:'Can I help you?',cn:'我能帮你吗？'},{en:'You can do it.',cn:'你能做到。'}],vid:'英语情态动词 can cannot 用法'},
+ {id:'S15',w:2,t:'本周复习·日常交流',d:'综合练习',ph:[{en:'Excuse me, can you help me?',cn:'打扰一下，你能帮我吗？'},{en:'Sure. What do you need?',cn:'当然。你需要什么？'},{en:'Thank you so much!',cn:'太感谢了！'},{en:'You are welcome.',cn:'不客气。'}],vid:'英语日常交流 情景对话 复习'},
+ // Week 4
+ {id:'S16',w:3,t:'Workplace Greetings',d:'职场问候',ph:[{en:'Good morning, everyone.',cn:'大家早上好。'},{en:'How was your weekend?',cn:'周末过得怎么样？'},{en:'See you tomorrow.',cn:'明天见。'},{en:'Have a good day.',cn:'祝你有美好的一天。'},{en:'Take care.',cn:'保重。'}],vid:'职场英语口语 问候语 办公室'},
+ {id:'S17',w:3,t:'Introducing Colleagues',d:'介绍同事',ph:[{en:'This is my colleague, Zhang Wei.',cn:'这是我同事张伟。'},{en:'He is our project manager.',cn:'他是我们的项目经理。'},{en:'She works in the IT department.',cn:'她在IT部门工作。'},{en:'Let me introduce you to...',cn:'让我把你介绍给...'},{en:'Have you met...?',cn:'你见过...吗？'}],vid:'职场英语 介绍同事 introduce colleague'},
+ {id:'S18',w:3,t:'Office Directions',d:'办公室问路',ph:[{en:'Where is the meeting room?',cn:'会议室在哪里？'},{en:'It is on the second floor.',cn:'在二楼。'},{en:'Go straight and turn left.',cn:'直走然后左转。'},{en:'The restroom is over there.',cn:'洗手间在那边。'},{en:'How do I get to...?',cn:'我怎么去...？'}],vid:'英语问路 办公室方向 directions'},
+ {id:'S19',w:3,t:'Basic Requests',d:'基本工作请求',ph:[{en:'Can you send me an email?',cn:'你能给我发封邮件吗？'},{en:'Please check this document.',cn:'请检查这份文件。'},{en:'Could you print this for me?',cn:'能帮我打印一下吗？'},{en:'I will send it to you.',cn:'我会发给你。'},{en:'Please reply ASAP.',cn:'请尽快回复。'}],vid:'职场英语 基本请求 request email'},
+ {id:'S20',w:3,t:'本周复习·职场入门',d:'综合练习',ph:[{en:'Good morning! This is my colleague, Zhang Wei.',cn:'早上好！这是我同事张伟。'},{en:'Nice to meet you. Where is the meeting room?',cn:'很高兴认识你。会议室在哪？'},{en:'It is on the second floor. Can you send me the agenda?',cn:'在二楼。能把议程发我吗？'},{en:'Sure, I will send it to you.',cn:'好的，我会发给你。'}],vid:'职场英语 入门 情景对话复习'},
+ // Week 5
+ {id:'S21',w:4,t:'Office Communication',d:'办公沟通',ph:[{en:'I will send you an email.',cn:'我会给你发邮件。'},{en:'Did you get my message?',cn:'你收到我的消息了吗？'},{en:'Please check your inbox.',cn:'请查看你的收件箱。'},{en:'I will call you back.',cn:'我会给你回电话。'},{en:'Let me confirm that.',cn:'让我确认一下。'}],vid:'办公英语口语 邮件电话沟通'},
+ {id:'S22',w:4,t:'Scheduling Meetings',d:'安排会议',ph:[{en:'Let us have a meeting.',cn:'我们开个会吧。'},{en:'Are you available at 3 PM?',cn:'你下午三点有空吗？'},{en:'I need to reschedule.',cn:'我需要重新安排。'},{en:'The meeting is postponed.',cn:'会议推迟了。'},{en:'Can we move it to Friday?',cn:'能改到周五吗？'}],vid:'英语会议安排 scheduling meeting 口语'},
+ {id:'S23',w:4,t:'Asking for Checks',d:'请人检查',ph:[{en:'Can you check this report?',cn:'你能检查这份报告吗？'},{en:'Please review the document.',cn:'请审阅这份文件。'},{en:'I found an error here.',cn:'我发现这里有个错误。'},{en:'Everything looks good.',cn:'一切看起来没问题。'},{en:'Could you double-check?',cn:'能再检查一遍吗？'}],vid:'职场英语 check review 检查审阅'},
+ {id:'S24',w:4,t:'Follow Up',d:'后续跟进',ph:[{en:'I will get back to you.',cn:'我会回复你的。'},{en:'Let me follow up on this.',cn:'我来跟进这件事。'},{en:'What is the status?',cn:'目前什么状态？'},{en:'I am still working on it.',cn:'我还在处理。'},{en:'I will keep you updated.',cn:'我会随时更新进展。'}],vid:'职场英语 follow up 跟进 follow'},
+ {id:'S25',w:4,t:'本周复习·办公沟通',d:'综合练习',ph:[{en:'Hi, did you get my email about the meeting?',cn:'嗨，你收到我关于会议的邮件了吗？'},{en:'Yes, can we move it to 3 PM?',cn:'收到了，能改到下午三点吗？'},{en:'Sure. I will send the updated agenda.',cn:'好的，我会发更新后的议程。'},{en:'Thanks. I will get back to you after reviewing.',cn:'谢谢，我看完后回复你。'}],vid:'办公英语沟通 情景对话复习'},
+ // Week 6
+ {id:'S26',w:5,t:'Starting a Meeting',d:'开始会议',ph:[{en:'Let us start the meeting.',cn:'我们开始开会吧。'},{en:'Thank you all for coming.',cn:'感谢大家出席。'},{en:'Today\'s agenda is...',cn:'今天的议程是...'},{en:'Let us go through the items.',cn:'我们逐项过一下。'},{en:'Who would like to start?',cn:'谁先开始？'}],vid:'英语会议开始 starting a meeting 口语'},
+ {id:'S27',w:5,t:'Asking Questions',d:'会议提问',ph:[{en:'Any questions?',cn:'有什么问题吗？'},{en:'I have a question.',cn:'我有个问题。'},{en:'Could you explain that?',cn:'你能解释一下吗？'},{en:'What do you mean by...?',cn:'你说的...是什么意思？'},{en:'Can you give an example?',cn:'能举个例子吗？'}],vid:'英语会议提问 meeting questions 口语'},
+ {id:'S28',w:5,t:'Expressing Opinions',d:'表达观点',ph:[{en:'I agree with you.',cn:'我同意你的看法。'},{en:'I disagree.',cn:'我不同意。'},{en:'In my opinion...',cn:'在我看来...'},{en:'That is a good point.',cn:'说得好。'},{en:'I see what you mean.',cn:'我明白你的意思。'}],vid:'英语表达观点 agree disagree 会议'},
+ {id:'S29',w:5,t:'Action Items',d:'后续行动',ph:[{en:'Let us summarize the action items.',cn:'我们总结一下行动项。'},{en:'I will take care of this.',cn:'我来负责这个。'},{en:'The deadline is next Friday.',cn:'截止日期是下周五。'},{en:'Who is responsible for this?',cn:'谁负责这个？'},{en:'Let us follow up next week.',cn:'我们下周跟进。'}],vid:'英语会议 action items 行动项'},
+ {id:'S30',w:5,t:'本周复习·会议英语',d:'综合练习',ph:[{en:'Let us start. Today\'s agenda is the project plan.',cn:'开始吧。今天议程是项目计划。'},{en:'I have a question. What is the deadline?',cn:'我有个问题。截止日期是什么时候？'},{en:'The deadline is next Friday. Any other questions?',cn:'截止日期是下周五。还有其他问题吗？'},{en:'I agree. I will send the plan by Thursday.',cn:'同意。我周四前发计划。'}],vid:'会议英语 情景对话复习'},
+ // Week 7
+ {id:'S31',w:6,t:'Opening a Presentation',d:'演讲开场',ph:[{en:'Today I will talk about...',cn:'今天我要讲的是...'},{en:'Let me introduce our project.',cn:'让我介绍我们的项目。'},{en:'Thank you for your time.',cn:'感谢大家的时间。'},{en:'The topic today is...',cn:'今天的主题是...'},{en:'I will keep it brief.',cn:'我会简短一些。'}],vid:'英语演讲开场 presentation opening'},
+ {id:'S32',w:6,t:'Explaining Content',d:'讲解内容',ph:[{en:'As you can see on this slide...',cn:'如这张幻灯片所示...'},{en:'Let me explain in detail.',cn:'让我详细解释。'},{en:'The key point is...',cn:'关键点是...'},{en:'This chart shows...',cn:'这张图表显示...'},{en:'To put it simply...',cn:'简单来说...'}],vid:'英语演讲 explaining content 讲解'},
+ {id:'S33',w:6,t:'Answering Questions',d:'回答提问',ph:[{en:'That is a great question.',cn:'这是个好问题。'},{en:'Let me answer that.',cn:'让我来回答。'},{en:'I am not sure, but I will check.',cn:'我不确定，但我会查一下。'},{en:'Does that answer your question?',cn:'这回答了你的问题吗？'},{en:'Could you clarify your question?',cn:'你能详细说说你的问题吗？'}],vid:'英语演讲 Q&A 回答提问'},
+ {id:'S34',w:6,t:'Closing a Presentation',d:'演讲结尾',ph:[{en:'In conclusion...',cn:'总结一下...'},{en:'To summarize...',cn:'概括来说...'},{en:'Thank you for your attention.',cn:'感谢大家的关注。'},{en:'Are there any final questions?',cn:'还有最后的问题吗？'},{en:'I will share the slides with you.',cn:'我会把幻灯片分享给大家。'}],vid:'英语演讲结尾 closing presentation'},
+ {id:'S35',w:6,t:'本周复习·演讲展示',d:'综合练习',ph:[{en:'Today I will talk about our new system.',cn:'今天我要讲我们的新系统。'},{en:'As you can see, the timeline is tight.',cn:'如各位所见，时间很紧。'},{en:'The key point is we need more resources.',cn:'关键是我们需要更多资源。'},{en:'In conclusion, we can deliver on time.',cn:'总结一下，我们能按时交付。'},{en:'Thank you for your attention. Any questions?',cn:'感谢关注。有什么问题吗？'}],vid:'英语演讲展示 情景对话复习'},
+ // Week 8
+ {id:'S36',w:7,t:'Small Talk',d:'闲聊寒暄',ph:[{en:'How was your weekend?',cn:'周末过得怎么样？'},{en:'It was great. I went hiking.',cn:'很好。我去爬山了。'},{en:'Did you do anything special?',cn:'你做什么特别的事了吗？'},{en:'The weather was nice.',cn:'天气不错。'},{en:'How are things?',cn:'最近怎么样？'}],vid:'英语闲聊 small talk 职场社交'},
+ {id:'S37',w:7,t:'Business Lunch',d:'商务午餐',ph:[{en:'Let us have lunch together.',cn:'我们一起吃午饭吧。'},{en:'What would you like to eat?',cn:'你想吃什么？'},{en:'I recommend the steak.',cn:'我推荐牛排。'},{en:'This is delicious!',cn:'这个很好吃！'},{en:'Let me get the bill.',cn:'我来买单。'}],vid:'商务英语午餐 business lunch 口语'},
+ {id:'S38',w:7,t:'Cheers & Dining',d:'商务餐叙',ph:[{en:'Cheers!',cn:'干杯！'},{en:'To our cooperation!',cn:'为我们的合作干杯！'},{en:'Enjoy your meal.',cn:'请慢用。'},{en:'Would you like some wine?',cn:'要来点葡萄酒吗？'},{en:'I am full, thank you.',cn:'我吃饱了，谢谢。'}],vid:'商务英语 dining cheers 餐叙'},
+ {id:'S39',w:7,t:'Saying Goodbye',d:'告别',ph:[{en:'See you next time.',cn:'下次见。'},{en:'It was nice talking to you.',cn:'很高兴和你聊天。'},{en:'Let us keep in touch.',cn:'保持联系。'},{en:'Have a safe trip.',cn:'一路平安。'},{en:'Looking forward to seeing you again.',cn:'期待再见到你。'}],vid:'英语告别 saying goodbye 职场'},
+ {id:'S40',w:7,t:'本周复习·商务社交',d:'综合练习',ph:[{en:'How was your weekend? Did you do anything special?',cn:'周末怎么样？做什么特别的事了吗？'},{en:'I went to a concert. Let us have lunch this week.',cn:'我去了演唱会。这周一起吃午饭吧。'},{en:'Sure! Cheers to our new project!',cn:'好啊！为新项目干杯！'},{en:'Cheers! See you next time.',cn:'干杯！下次见。'}],vid:'商务社交英语 情景对话复习'},
+ // Week 9
+ {id:'S41',w:8,t:'Expressing Suggestions',d:'提出建议',ph:[{en:'I think we should...',cn:'我认为我们应该...'},{en:'I suggest that we...',cn:'我建议我们...'},{en:'How about trying this approach?',cn:'试试这个方法怎么样？'},{en:'What if we...?',cn:'如果我们...呢？'},{en:'It might be better to...',cn:'也许...更好。'}],vid:'商务英语 suggest 建议 表达'},
+ {id:'S42',w:8,t:'Discussing Options',d:'讨论方案',ph:[{en:'That sounds good.',cn:'听起来不错。'},{en:'Let me think about it.',cn:'让我考虑一下。'},{en:'What are the alternatives?',cn:'有什么替代方案？'},{en:'We have two options.',cn:'我们有两个选择。'},{en:'Let us compare them.',cn:'我们来比较一下。'}],vid:'商务英语 discuss options 讨论方案'},
+ {id:'S43',w:8,t:'Expressing Concerns',d:'表达顾虑',ph:[{en:'I am a little concerned about...',cn:'我对...有些担心。'},{en:'The risk is...',cn:'风险是...'},{en:'What if it does not work?',cn:'如果不行怎么办？'},{en:'We need to be careful.',cn:'我们需要谨慎。'},{en:'Is there any risk?',cn:'有什么风险吗？'}],vid:'商务英语 concern 表达顾虑 risk'},
+ {id:'S44',w:8,t:'Reaching Agreement',d:'达成共识',ph:[{en:'Let us agree on this.',cn:'我们就这个达成一致吧。'},{en:'I can accept that.',cn:'我可以接受。'},{en:'Can we compromise?',cn:'我们能折中一下吗？'},{en:'It is a deal.',cn:'一言为定。'},{en:'I am happy with this.',cn:'我对这个很满意。'}],vid:'商务英语 agreement 达成共识 negotiate'},
+ {id:'S45',w:8,t:'本周复习·商务谈判',d:'综合练习',ph:[{en:'I suggest we deliver in two phases.',cn:'我建议分两阶段交付。'},{en:'That sounds good, but I am concerned about the timeline.',cn:'听起来不错，但我担心时间线。'},{en:'What if we add one more person?',cn:'如果再加一个人呢？'},{en:'I can accept that. It is a deal!',cn:'我可以接受。一言为定！'}],vid:'商务谈判英语 情景对话复习'},
+ // Week 10 - Clinical Research English
+ {id:'S46',w:9,t:'Clinical Trial Basics',d:'临床试验基础',ph:[{en:'This is a clinical trial.',cn:'这是一项临床试验。'},{en:'The protocol has been approved.',cn:'方案已获批准。'},{en:'We are in Phase II.',cn:'我们处于II期阶段。'},{en:'The sponsor is a pharmaceutical company.',cn:'申办方是一家制药公司。'},{en:'The investigator leads the study.',cn:'研究者负责这项研究。'}],vid:'临床试验英语 clinical trial 基础词汇'},
+ {id:'S47',w:9,t:'Patient & Subject',d:'受试者相关',ph:[{en:'The subject signed the informed consent.',cn:'受试者签署了知情同意书。'},{en:'Patient safety is our priority.',cn:'患者安全是我们的首要任务。'},{en:'We need to enroll 100 subjects.',cn:'我们需要入组100名受试者。'},{en:'The subject was screened today.',cn:'受试者今天完成了筛选。'},{en:'Adverse events must be reported.',cn:'不良事件必须上报。'}],vid:'临床研究英语 subject patient 受试者'},
+ {id:'S48',w:9,t:'Data & Database',d:'数据相关',ph:[{en:'The data looks accurate.',cn:'数据看起来准确。'},{en:'Please enter the data into the EDC system.',cn:'请将数据录入EDC系统。'},{en:'The database is locked.',cn:'数据库已锁定。'},{en:'We need to run a data query.',cn:'我们需要运行一个数据质疑。'},{en:'The data has been verified.',cn:'数据已验证。'}],vid:'临床数据英语 database EDC 数据录入'},
+ {id:'S49',w:9,t:'Investigator & Sponsor',d:'研究者与申办方',ph:[{en:'The principal investigator is responsible.',cn:'主要研究者负责。'},{en:'The sponsor monitors the study.',cn:'申办方监督这项研究。'},{en:'The CRA will visit the site next week.',cn:'CRA下周会来中心访视。'},{en:'The ethics committee approved the study.',cn:'伦理委员会批准了这项研究。'},{en:'We need IRB approval.',cn:'我们需要IRB批准。'}],vid:'临床研究英语 investigator sponsor 申办方'},
+ {id:'S50',w:9,t:'本周复习·临床研究',d:'综合练习',ph:[{en:'The clinical trial is in Phase III.',cn:'这项临床试验处于III期。'},{en:'The investigator enrolled 50 subjects so far.',cn:'研究者目前入组了50名受试者。'},{en:'The sponsor needs the data by Friday.',cn:'申办方周五前需要数据。'},{en:'The CRA will check the EDC system.',cn:'CRA会检查EDC系统。'},{en:'Adverse events were reported to the IRB.',cn:'不良事件已上报IRB。'}],vid:'临床研究英语 情景对话复习'},
+ // Week 11 - System Validation English
+ {id:'S51',w:10,t:'System & Validation',d:'系统与验证',ph:[{en:'The system needs validation.',cn:'系统需要验证。'},{en:'We follow GAMP 5 methodology.',cn:'我们遵循GAMP 5方法论。'},{en:'The validation plan is ready.',cn:'验证计划已就绪。'},{en:'Installation Qualification is done.',cn:'安装确认已完成。'},{en:'Operational Qualification passed.',cn:'运行确认已通过。'}],vid:'计算机系统验证英语 CSV validation'},
+ {id:'S52',w:10,t:'Requirements & Specs',d:'需求与规范',ph:[{en:'The user requirements are documented.',cn:'用户需求已记录。'},{en:'The functional specification is approved.',cn:'功能规范已批准。'},{en:'We need to update the design specification.',cn:'我们需要更新设计规范。'},{en:'The requirements traceability matrix is complete.',cn:'需求追溯矩阵已完成。'},{en:'This is a critical requirement.',cn:'这是一个关键需求。'}],vid:'系统验证英语 requirement specification URS'},
+ {id:'S53',w:10,t:'Testing & Qualification',d:'测试与确认',ph:[{en:'We need to execute the test scripts.',cn:'我们需要执行测试脚本。'},{en:'The test results are acceptable.',cn:'测试结果可接受。'},{en:'User Acceptance Testing starts next week.',cn:'用户验收测试下周开始。'},{en:'There is a deviation in the test.',cn:'测试中有一个偏差。'},{en:'Performance Qualification is pending.',cn:'性能确认待完成。'}],vid:'系统测试英语 UAT test script qualification'},
+ {id:'S54',w:10,t:'Compliance & Audit',d:'合规与审计',ph:[{en:'We must comply with 21 CFR Part 11.',cn:'我们必须符合21 CFR Part 11。'},{en:'The audit is scheduled for next month.',cn:'审计安排在下个月。'},{en:'All SOPs must be followed.',cn:'所有SOP必须遵守。'},{en:'We need an audit trail.',cn:'我们需要审计追踪。'},{en:'The system is GxP compliant.',cn:'系统符合GxP要求。'}],vid:'合规英语 21 CFR Part 11 audit GxP'},
+ {id:'S55',w:10,t:'本周复习·系统验证',d:'综合练习',ph:[{en:'The system validation follows GAMP 5.',cn:'系统验证遵循GAMP 5。'},{en:'User requirements and functional specs are approved.',cn:'用户需求和功能规范已批准。'},{en:'IQ and OQ are done. UAT starts next week.',cn:'IQ和OQ已完成。UAT下周开始。'},{en:'The system is 21 CFR Part 11 compliant.',cn:'系统符合21 CFR Part 11。'},{en:'The audit is scheduled for next month.',cn:'审计安排在下个月。'}],vid:'系统验证英语 情景对话复习'},
+ // Week 12 - Integrated Business Scenarios
+ {id:'S56',w:11,t:'Project Status Update',d:'项目状态汇报',ph:[{en:'Here is the project status update.',cn:'这是项目状态汇报。'},{en:'We are on track with the timeline.',cn:'我们按时间线推进。'},{en:'The system validation is 80% complete.',cn:'系统验证完成80%。'},{en:'We have one open deviation.',cn:'我们有一个未关闭的偏差。'},{en:'The go-live date is September 1st.',cn:'上线日期是9月1日。'}],vid:'商务英语 项目状态汇报 project status'},
+ {id:'S57',w:11,t:'Weekly Report',d:'周报汇报',ph:[{en:'This week we completed the OQ testing.',cn:'本周我们完成了OQ测试。'},{en:'Three issues were identified and resolved.',cn:'发现并解决了三个问题。'},{en:'Next week we will start UAT.',cn:'下周我们将开始UAT。'},{en:'The risk level is low.',cn:'风险等级为低。'},{en:'No critical findings.',cn:'无关键发现。'}],vid:'商务英语 周报 weekly report 汇报'},
+ {id:'S58',w:11,t:'Q&A Session',d:'问答环节',ph:[{en:'I have a question about the validation.',cn:'我有个关于验证的问题。'},{en:'Could you elaborate on the CAPA?',cn:'你能详细说明一下CAPA吗？'},{en:'How do you handle deviations?',cn:'你们如何处理偏差？'},{en:'Is the system 21 CFR Part 11 compliant?',cn:'系统符合21 CFR Part 11吗？'},{en:'What is the validation strategy?',cn:'验证策略是什么？'}],vid:'商务英语 Q&A session 问答环节'},
+ {id:'S59',w:11,t:'Business Email Practice',d:'商务邮件口述',ph:[{en:'I am writing to follow up on...',cn:'我写信是想跟进...'},{en:'Please find attached the validation report.',cn:'请查收附件中的验证报告。'},{en:'Could you review and provide feedback?',cn:'能否审阅并提供反馈？'},{en:'I look forward to your reply.',cn:'期待你的回复。'},{en:'Best regards.',cn:'此致敬礼。'}],vid:'商务英语邮件 email practice 口语'},
+ {id:'S60',w:11,t:'总复习·综合场景',d:'综合练习',ph:[{en:'Good morning. Here is the project status update.',cn:'早上好。这是项目状态汇报。'},{en:'The system validation is 80% complete. We are on track.',cn:'系统验证完成80%。进度正常。'},{en:'I have a question. Is the system 21 CFR Part 11 compliant?',cn:'我有个问题。系统符合21 CFR Part 11吗？'},{en:'Yes, it is. I will send the validation report by email.',cn:'是的。我会邮件发送验证报告。'},{en:'Thank you. I look forward to your reply.',cn:'谢谢。期待你的回复。'}],vid:'商务英语综合 场景对话 总复习'}
+];
+
+const VOCAB_WEEKS = [
+ {n:'第1周',t:'基础词汇',p:1},
+ {n:'第2周',t:'高频动词',p:1},
+ {n:'第3周',t:'常用名词',p:1},
+ {n:'第4周',t:'职场基础词',p:1},
+ {n:'第5周',t:'会议词汇',p:2},
+ {n:'第6周',t:'邮件与沟通',p:2},
+ {n:'第7周',t:'项目与管理',p:2},
+ {n:'第8周',t:'谈判与协议',p:2},
+ {n:'第9周',t:'临床研究基础',p:3},
+ {n:'第10周',t:'计算机系统验证',p:3},
+ {n:'第11周',t:'GxP与合规',p:3},
+ {n:'第12周',t:'临床系统术语',p:3}
+];
+
+const VOCAB_LESSONS = [
+ // Week 1 - Basic
+ {id:'V01',w:0,t:'问候与数字',d:'10个基础词',words:[
+  {w:'hello',ph:'/həˈloʊ/',m:'n./v.你好',ex:'Hello, how are you?'},
+  {w:'goodbye',ph:'/ˌɡʊdˈbaɪ/',m:'n.再见',ex:'Goodbye, see you tomorrow.'},
+  {w:'name',ph:'/neɪm/',m:'n.名字',ex:'My name is Li Ming.'},
+  {w:'number',ph:'/ˈnʌmbər/',m:'n.数字；号码',ex:'What is your phone number?'},
+  {w:'time',ph:'/taɪm/',m:'n.时间',ex:'What time is it?'},
+  {w:'day',ph:'/deɪ/',m:'n.天；白天',ex:'What day is today?'},
+  {w:'week',ph:'/wiːk/',m:'n.周；星期',ex:'See you next week.'},
+  {w:'month',ph:'/mʌnθ/',m:'n.月',ex:'January is the first month.'},
+  {w:'year',ph:'/jɪr/',m:'n.年',ex:'Happy New Year!'},
+  {w:'today',ph:'/təˈdeɪ/',m:'n./adv.今天',ex:'Today is Monday.'}
+ ]},
+ {id:'V02',w:0,t:'颜色与家庭',d:'10个基础词',words:[
+  {w:'color',ph:'/ˈkʌlər/',m:'n.颜色',ex:'What is your favorite color?'},
+  {w:'red',ph:'/red/',m:'n./adj.红色(的)',ex:'I like the red one.'},
+  {w:'blue',ph:'/bluː/',m:'n./adj.蓝色(的)',ex:'The sky is blue.'},
+  {w:'family',ph:'/ˈfæməli/',m:'n.家庭',ex:'I love my family.'},
+  {w:'father',ph:'/ˈfɑːðər/',m:'n.父亲',ex:'My father is a doctor.'},
+  {w:'mother',ph:'/ˈmʌðər/',m:'n.母亲',ex:'My mother is a teacher.'},
+  {w:'friend',ph:'/frend/',m:'n.朋友',ex:'He is my best friend.'},
+  {w:'people',ph:'/ˈpiːpl/',m:'n.人们',ex:'Many people attended the meeting.'},
+  {w:'man',ph:'/mæn/',m:'n.男人',ex:'That man is our manager.'},
+  {w:'woman',ph:'/ˈwʊmən/',m:'n.女人',ex:'The woman in red is our boss.'}
+ ]},
+ {id:'V03',w:0,t:'日常物品',d:'10个基础词',words:[
+  {w:'book',ph:'/bʊk/',m:'n.书；v.预订',ex:'I booked a meeting room.'},
+  {w:'phone',ph:'/foʊn/',m:'n.电话',ex:'Can I use your phone?'},
+  {w:'computer',ph:'/kəmˈpjuːtər/',m:'n.电脑',ex:'I work on my computer all day.'},
+  {w:'desk',ph:'/desk/',m:'n.桌子',ex:'Your report is on the desk.'},
+  {w:'chair',ph:'/tʃer/',m:'n.椅子',ex:'Please take a chair.'},
+  {w:'door',ph:'/dɔːr/',m:'n.门',ex:'The door is open.'},
+  {w:'window',ph:'/ˈwɪndoʊ/',m:'n.窗户',ex:'Please open the window.'},
+  {w:'paper',ph:'/ˈpeɪpər/',m:'n.纸；文件',ex:'I need some paper.'},
+  {w:'pen',ph:'/pen/',m:'n.笔',ex:'Can I borrow your pen?'},
+  {w:'bag',ph:'/bæɡ/',m:'n.包',ex:'Where is your bag?'}
+ ]},
+ {id:'V04',w:0,t:'常用形容词',d:'10个基础词',words:[
+  {w:'good',ph:'/ɡʊd/',m:'adj.好的',ex:'That is a good idea.'},
+  {w:'bad',ph:'/bæd/',m:'adj.坏的',ex:'I had a bad day.'},
+  {w:'big',ph:'/bɪɡ/',m:'adj.大的',ex:'This is a big project.'},
+  {w:'small',ph:'/smɔːl/',m:'adj.小的',ex:'The room is too small.'},
+  {w:'new',ph:'/nuː/',m:'adj.新的',ex:'This is my new colleague.'},
+  {w:'old',ph:'/oʊld/',m:'adj.旧的；老的',ex:'This is an old system.'},
+  {w:'happy',ph:'/ˈhæpi/',m:'adj.开心的',ex:'I am happy with the result.'},
+  {w:'easy',ph:'/ˈiːzi/',m:'adj.容易的',ex:'English is not easy, but I can learn.'},
+  {w:'right',ph:'/raɪt/',m:'adj.对的；右边的',ex:'You are right.'},
+  {w:'first',ph:'/fɜːrst/',m:'adj./adv.第一',ex:'This is my first day at work.'}
+ ]},
+ {id:'V05',w:0,t:'常用副词',d:'10个基础词',words:[
+  {w:'yes',ph:'/jes/',m:'adv.是的',ex:'Yes, I agree.'},
+  {w:'no',ph:'/noʊ/',m:'adv.不',ex:'No, thank you.'},
+  {w:'now',ph:'/naʊ/',m:'adv.现在',ex:'We need to start now.'},
+  {w:'here',ph:'/hɪr/',m:'adv.这里',ex:'Come here, please.'},
+  {w:'there',ph:'/ðer/',m:'adv.那里',ex:'The meeting room is there.'},
+  {w:'always',ph:'/ˈɔːlweɪz/',m:'adv.总是',ex:'He is always on time.'},
+  {w:'never',ph:'/ˈnevər/',m:'adv.从不',ex:'I never late for work.'},
+  {w:'very',ph:'/ˈveri/',m:'adv.非常',ex:'Thank you very much.'},
+  {w:'too',ph:'/tuː/',m:'adv.也；太',ex:'Me too. It is too late.'},
+  {w:'again',ph:'/əˈɡen/',m:'adv.再次',ex:'Could you say that again?'}
+ ]},
+ // Week 2 - High frequency verbs
+ {id:'V06',w:1,t:'be动词与have',d:'10个核心动词',words:[
+  {w:'be',ph:'/biː/',m:'v.是；存在',ex:'I am a QA manager.'},
+  {w:'have',ph:'/hæv/',m:'v.有',ex:'I have a meeting at 3 PM.'},
+  {w:'has',ph:'/hæz/',m:'v.有(三单)',ex:'He has a new laptop.'},
+  {w:'do',ph:'/duː/',m:'v.做',ex:'What do you do?'},
+  {w:'does',ph:'/dʌz/',m:'v.做(三单)',ex:'He does not work here.'},
+  {w:'go',ph:'/ɡoʊ/',m:'v.去',ex:'I go to work by subway.'},
+  {w:'come',ph:'/kʌm/',m:'v.来',ex:'Please come to my office.'},
+  {w:'get',ph:'/ɡet/',m:'v.获得；到达',ex:'I got your email.'},
+  {w:'make',ph:'/meɪk/',m:'v.制作；使得',ex:'Let me make a call.'},
+  {w:'take',ph:'/teɪk/',m:'v.拿；花费',ex:'It takes 20 minutes.'}
+ ]},
+ {id:'V07',w:1,t:'动作动词',d:'10个核心动词',words:[
+  {w:'give',ph:'/ɡɪv/',m:'v.给',ex:'Please give me the report.'},
+  {w:'see',ph:'/siː/',m:'v.看见',ex:'I see what you mean.'},
+  {w:'know',ph:'/noʊ/',m:'v.知道',ex:'I know the answer.'},
+  {w:'think',ph:'/θɪŋk/',m:'v.思考；认为',ex:'I think we should go.'},
+  {w:'say',ph:'/seɪ/',m:'v.说',ex:'What did he say?'},
+  {w:'tell',ph:'/tel/',m:'v.告诉',ex:'Please tell me the truth.'},
+  {w:'ask',ph:'/æsk/',m:'v.询问',ex:'May I ask a question?'},
+  {w:'find',ph:'/faɪnd/',m:'v.找到',ex:'I found the error.'},
+  {w:'work',ph:'/wɜːrk/',m:'v./n.工作',ex:'I work in Shanghai.'},
+  {w:'use',ph:'/juːz/',m:'v.使用',ex:'Can I use this system?'}
+ ]},
+ {id:'V08',w:1,t:'沟通动词',d:'10个核心动词',words:[
+  {w:'want',ph:'/wɑːnt/',m:'v.想要',ex:'I want to learn English.'},
+  {w:'need',ph:'/niːd/',m:'v.需要',ex:'We need more time.'},
+  {w:'try',ph:'/traɪ/',m:'v.尝试',ex:'Let me try again.'},
+  {w:'help',ph:'/help/',m:'v./n.帮助',ex:'Can you help me?'},
+  {w:'call',ph:'/kɔːl/',m:'v.打电话；呼叫',ex:'I will call you later.'},
+  {w:'send',ph:'/send/',m:'v.发送',ex:'I will send you the file.'},
+  {w:'check',ph:'/tʃek/',m:'v.检查',ex:'Please check the data.'},
+  {w:'start',ph:'/stɑːrt/',m:'v.开始',ex:'Let us start the meeting.'},
+  {w:'stop',ph:'/stɑːp/',m:'v.停止',ex:'Please stop talking.'},
+  {w:'open',ph:'/ˈoʊpən/',m:'v.打开',ex:'Open the file, please.'}
+ ]},
+ {id:'V09',w:1,t:'状态动词',d:'10个核心动词',words:[
+  {w:'look',ph:'/lʊk/',m:'v.看；看起来',ex:'It looks good to me.'},
+  {w:'feel',ph:'/fiːl/',m:'v.感觉',ex:'I feel great today.'},
+  {w:'seem',ph:'/siːm/',m:'v.似乎',ex:'It seems correct.'},
+  {w:'become',ph:'/bɪˈkʌm/',m:'v.变成',ex:'He became our manager.'},
+  {w:'keep',ph:'/kiːp/',m:'v.保持',ex:'Keep up the good work.'},
+  {w:'let',ph:'/let/',m:'v.让',ex:'Let me check.'},
+  {w:'put',ph:'/pʊt/',m:'v.放',ex:'Put it on the table.'},
+  {w:'read',ph:'/riːd/',m:'v.阅读',ex:'Did you read the email?'},
+  {w:'write',ph:'/raɪt/',m:'v.写',ex:'Please write a report.'},
+  {w:'learn',ph:'/lɜːrn/',m:'v.学习',ex:'I want to learn English.'}
+ ]},
+ {id:'V10',w:1,t:'动词复习',d:'10个核心动词',words:[
+  {w:'meet',ph:'/miːt/',m:'v.见面；会议',ex:'Let us meet at 3 PM.'},
+  {w:'talk',ph:'/tɔːk/',m:'v.谈话',ex:'We need to talk.'},
+  {w:'show',ph:'/ʃoʊ/',m:'v.展示',ex:'Show me the report.'},
+  {w:'leave',ph:'/liːv/',m:'v.离开',ex:'I will leave at 5 PM.'},
+  {w:'wait',ph:'/weɪt/',m:'v.等待',ex:'Please wait a moment.'},
+  {w:'bring',ph:'/brɪŋ/',m:'v.带来',ex:'Bring your laptop.'},
+  {w:'buy',ph:'/baɪ/',m:'v.买',ex:'I will buy lunch today.'},
+  {w:'pay',ph:'/peɪ/',m:'v.支付',ex:'I will pay for the lunch.'},
+  {w:'run',ph:'/rʌn/',m:'v.跑；运行',ex:'The system runs well.'},
+  {w:'set',ph:'/set/',m:'v.设置',ex:'Let me set up the meeting.'}
+ ]},
+ // Week 3 - Common nouns
+ {id:'V11',w:2,t:'人物与身份',d:'10个名词',words:[
+  {w:'colleague',ph:'/ˈkɑːliːɡ/',m:'n.同事',ex:'This is my colleague, Zhang Wei.'},
+  {w:'manager',ph:'/ˈmænɪdʒər/',m:'n.经理',ex:'Our manager is in a meeting.'},
+  {w:'boss',ph:'/bɔːs/',m:'n.老板',ex:'My boss approved the plan.'},
+  {w:'team',ph:'/tiːm/',m:'n.团队',ex:'Our team is working hard.'},
+  {w:'company',ph:'/ˈkʌmpəni/',m:'n.公司',ex:'I work in a pharmaceutical company.'},
+  {w:'customer',ph:'/ˈkʌstəmər/',m:'n.客户',ex:'The customer is very happy.'},
+  {w:'partner',ph:'/ˈpɑːrtnər/',m:'n.合作伙伴',ex:'He is our business partner.'},
+  {w:'expert',ph:'/ˈekspɜːrt/',m:'n.专家',ex:'She is an expert in validation.'},
+  {w:'leader',ph:'/ˈliːdər/',m:'n.领导',ex:'Our team leader is very supportive.'},
+  {w:'staff',ph:'/stæf/',m:'n.员工',ex:'All staff must attend.'}
+ ]},
+ {id:'V12',w:2,t:'地点与场所',d:'10个名词',words:[
+  {w:'office',ph:'/ˈɔːfɪs/',m:'n.办公室',ex:'I am at the office now.'},
+  {w:'room',ph:'/ruːm/',m:'n.房间',ex:'The meeting room is upstairs.'},
+  {w:'building',ph:'/ˈbɪldɪŋ/',m:'n.大楼',ex:'Our office is in that building.'},
+  {w:'floor',ph:'/flɔːr/',m:'n.楼层',ex:'IT is on the third floor.'},
+  {w:'city',ph:'/ˈsɪti/',m:'n.城市',ex:'Shanghai is a big city.'},
+  {w:'country',ph:'/ˈkʌntri/',m:'n.国家',ex:'Which country are you from?'},
+  {w:'home',ph:'/hoʊm/',m:'n.家',ex:'I work from home on Friday.'},
+  {w:'place',ph:'/pleɪs/',m:'n.地方',ex:'This is a good place to work.'},
+  {w:'station',ph:'/ˈsteɪʃn/',m:'n.站',ex:'The metro station is nearby.'},
+  {w:'restaurant',ph:'/ˈrestərɑːnt/',m:'n.餐厅',ex:'Let us go to a restaurant.'}
+ ]},
+ {id:'V13',w:2,t:'物品与工具',d:'10个名词',words:[
+  {w:'email',ph:'/ˈiːmeɪl/',m:'n.邮件',ex:'I will send you an email.'},
+  {w:'message',ph:'/ˈmesɪdʒ/',m:'n.消息',ex:'Did you get my message?'},
+  {w:'document',ph:'/ˈdɑːkjumənt/',m:'n.文件',ex:'Please review the document.'},
+  {w:'report',ph:'/rɪˈpɔːrt/',m:'n.报告',ex:'The report is ready.'},
+  {w:'file',ph:'/faɪl/',m:'n.文件；档案',ex:'Save the file on the server.'},
+  {w:'schedule',ph:'/ˈskedʒuːl/',m:'n.日程',ex:'What is your schedule today?'},
+  {w:'list',ph:'/lɪst/',m:'n.列表',ex:'Here is the task list.'},
+  {w:'plan',ph:'/plæn/',m:'n./v.计划',ex:'We need a backup plan.'},
+  {w:'project',ph:'/ˈprɑːdʒekt/',m:'n.项目',ex:'This is a big project.'},
+  {w:'task',ph:'/tæsk/',m:'n.任务',ex:'My task is to test the system.'}
+ ]},
+ {id:'V14',w:2,t:'时间与频次',d:'10个名词',words:[
+  {w:'morning',ph:'/ˈmɔːrnɪŋ/',m:'n.早晨',ex:'Good morning, everyone.'},
+  {w:'afternoon',ph:'/ˌæftərˈnuːn/',m:'n.下午',ex:'Good afternoon.'},
+  {w:'evening',ph:'/ˈiːvnɪŋ/',m:'n.晚上',ex:'Good evening.'},
+  {w:'Monday',ph:'/ˈmʌndeɪ/',m:'n.周一',ex:'The meeting is on Monday.'},
+  {w:'Friday',ph:'/ˈfraɪdeɪ/',m:'n.周五',ex:'The deadline is Friday.'},
+  {w:'weekend',ph:'/ˈwiːkend/',m:'n.周末',ex:'How was your weekend?'},
+  {w:'hour',ph:'/ˈaʊər/',m:'n.小时',ex:'The meeting is one hour.'},
+  {w:'minute',ph:'/ˈmɪnɪt/',m:'n.分钟',ex:'Give me five minutes.'},
+  {w:'date',ph:'/deɪt/',m:'n.日期',ex:'What is the date today?'},
+  {w:'deadline',ph:'/ˈdedlaɪn/',m:'n.截止日期',ex:'The deadline is next Friday.'}
+ ]},
+ {id:'V15',w:2,t:'概念与抽象',d:'10个名词',words:[
+  {w:'idea',ph:'/aɪˈdiːə/',m:'n.想法',ex:'That is a good idea.'},
+  {w:'question',ph:'/ˈkwestʃən/',m:'n.问题',ex:'I have a question.'},
+  {w:'answer',ph:'/ˈænsər/',m:'n.回答',ex:'What is the answer?'},
+  {w:'problem',ph:'/ˈprɑːbləm/',m:'n.问题；麻烦',ex:'We have a problem.'},
+  {w:'solution',ph:'/səˈluːʃn/',m:'n.解决方案',ex:'I have a solution.'},
+  {w:'reason',ph:'/ˈriːzn/',m:'n.原因',ex:'What is the reason?'},
+  {w:'result',ph:'/rɪˈzʌlt/',m:'n.结果',ex:'The results are good.'},
+  {w:'way',ph:'/weɪ/',m:'n.方式；路',ex:'This is the best way.'},
+  {w:'part',ph:'/pɑːrt/',m:'n.部分',ex:'This is part of the process.'},
+  {w:'information',ph:'/ˌɪnfərˈmeɪʃn/',m:'n.信息',ex:'I need more information.'}
+ ]},
+ // Week 4 - Workplace basics
+ {id:'V16',w:3,t:'办公室词汇',d:'10个职场词',words:[
+  {w:'meeting',ph:'/ˈmiːtɪŋ/',m:'n.会议',ex:'The meeting starts at 3 PM.'},
+  {w:'agenda',ph:'/əˈdʒendə/',m:'n.议程',ex:'Let us check the agenda.'},
+  {w:'minutes',ph:'/ˈmɪnɪts/',m:'n.会议纪要',ex:'I will send the meeting minutes.'},
+  {w:'presentation',ph:'/ˌprezenˈteɪʃn/',m:'n.演示；演讲',ex:'Your presentation was great.'},
+  {w:'department',ph:'/dɪˈpɑːrtmənt/',m:'n.部门',ex:'He works in the IT department.'},
+  {w:'colleague',ph:'/ˈkɑːliːɡ/',m:'n.同事',ex:'My colleague will join us.'},
+  {w:'boss',ph:'/bɔːs/',m:'n.老板',ex:'My boss wants to see you.'},
+  {w:'assistant',ph:'/əˈsɪstənt/',m:'n.助手；助理',ex:'My assistant will book the room.'},
+  {w:'client',ph:'/ˈklaɪənt/',m:'n.客户',ex:'The client is very satisfied.'},
+  {w:'supplier',ph:'/səˈplaɪər/',m:'n.供应商',ex:'We have a new supplier.'}
+ ]},
+ {id:'V17',w:3,t:'电脑与IT',d:'10个职场词',words:[
+  {w:'system',ph:'/ˈsɪstəm/',m:'n.系统',ex:'The system is down.'},
+  {w:'software',ph:'/ˈsɔːftwer/',m:'n.软件',ex:'We need new software.'},
+  {w:'hardware',ph:'/ˈhɑːrdwer/',m:'n.硬件',ex:'The hardware needs an upgrade.'},
+  {w:'server',ph:'/ˈsɜːrvər/',m:'n.服务器',ex:'The server is slow today.'},
+  {w:'network',ph:'/ˈnetwɜːrk/',m:'n.网络',ex:'The network is working fine.'},
+  {w:'database',ph:'/ˈdeɪtəbeɪs/',m:'n.数据库',ex:'The database is locked.'},
+  {w:'password',ph:'/ˈpæswɜːrd/',m:'n.密码',ex:'Please change your password.'},
+  {w:'account',ph:'/əˈkaʊnt/',m:'n.账户',ex:'Your account has been created.'},
+  {w:'screen',ph:'/skriːn/',m:'n.屏幕',ex:'Look at the screen.'},
+  {w:'keyboard',ph:'/ˈkiːbɔːrd/',m:'n.键盘',ex:'My keyboard is broken.'}
+ ]},
+ {id:'V18',w:3,t:'工作流程',d:'10个职场词',words:[
+  {w:'process',ph:'/ˈprɑːses/',m:'n.流程',ex:'We need to improve the process.'},
+  {w:'procedure',ph:'/prəˈsiːdʒər/',m:'n.程序；步骤',ex:'Follow the standard procedure.'},
+  {w:'step',ph:'/step/',m:'n.步骤',ex:'The first step is to plan.'},
+  {w:'phase',ph:'/feɪz/',m:'n.阶段',ex:'We are in the testing phase.'},
+  {w:'review',ph:'/rɪˈvjuː/',m:'n./v.审查',ex:'The review is scheduled for Monday.'},
+  {w:'approve',ph:'/əˈpruːv/',m:'v.批准',ex:'The plan was approved.'},
+  {w:'submit',ph:'/səbˈmɪt/',m:'v.提交',ex:'Please submit the report.'},
+  {w:'complete',ph:'/kəmˈpliːt/',m:'v.完成',ex:'The task is completed.'},
+  {w:'update',ph:'/ˈʌpdeɪt/',m:'n./v.更新',ex:'I will update you later.'},
+  {w:'confirm',ph:'/kənˈfɜːrm/',m:'v.确认',ex:'Please confirm the date.'}
+ ]},
+ {id:'V19',w:3,t:'沟通方式',d:'10个职场词',words:[
+  {w:'email',ph:'/ˈiːmeɪl/',m:'n.邮件',ex:'I will email you the details.'},
+  {w:'call',ph:'/kɔːl/',m:'n./v.电话',ex:'I have a call at 4 PM.'},
+  {w:'message',ph:'/ˈmesɪdʒ/',m:'n.消息',ex:'Leave a message please.'},
+  {w:'reply',ph:'/rɪˈplaɪ/',m:'n./v.回复',ex:'Please reply by Friday.'},
+  {w:'discuss',ph:'/dɪˈskʌs/',m:'v.讨论',ex:'Let us discuss this tomorrow.'},
+  {w:'explain',ph:'/ɪkˈspleɪn/',m:'v.解释',ex:'Could you explain this?'},
+  {w:'suggest',ph:'/səˈdʒest/',m:'v.建议',ex:'I suggest we wait.'},
+  {w:'agree',ph:'/əˈɡriː/',m:'v.同意',ex:'I agree with you.'},
+  {w:'inform',ph:'/ɪnˈfɔːrm/',m:'v.通知',ex:'I will inform the team.'},
+  {w:'contact',ph:'/ˈkɑːntækt/',m:'n./v.联系',ex:'Please contact me anytime.'}
+ ]},
+ {id:'V20',w:3,t:'工作状态',d:'10个职场词',words:[
+  {w:'busy',ph:'/ˈbɪzi/',m:'adj.忙碌的',ex:'I am busy right now.'},
+  {w:'available',ph:'/əˈveɪləbl/',m:'adj.有空的',ex:'Are you available at 3 PM?'},
+  {w:'ready',ph:'/ˈredi/',m:'adj.准备好的',ex:'The report is ready.'},
+  {w:'pending',ph:'/ˈpendɪŋ/',m:'adj.待处理的',ex:'The approval is still pending.'},
+  {w:'urgent',ph:'/ˈɜːrdʒənt/',m:'adj.紧急的',ex:'This is urgent.'},
+  {w:'important',ph:'/ɪmˈpɔːrtnt/',m:'adj.重要的',ex:'This is very important.'},
+  {w:'delay',ph:'/dɪˈleɪ/',m:'n./v.延迟',ex:'There is a delay in the project.'},
+  {w:'progress',ph:'/ˈprɑːɡres/',m:'n.进展',ex:'We made good progress.'},
+  {w:'issue',ph:'/ˈɪʃuː/',m:'n.问题；议题',ex:'We have an issue with the server.'},
+  {w:'status',ph:'/ˈsteɪtəs/',m:'n.状态',ex:'What is the current status?'}
+ ]},
+ // Week 5 - Meeting vocabulary
+ {id:'V21',w:4,t:'会议核心词汇',d:'10个会议词',words:[
+  {w:'agenda',ph:'/əˈdʒendə/',m:'n.议程',ex:'Let us review the agenda.'},
+  {w:'minutes',ph:'/ˈmɪnɪts/',m:'n.会议纪要',ex:'Who is taking the minutes?'},
+  {w:'participant',ph:'/pɑːrˈtɪsɪpənt/',m:'n.参会者',ex:'All participants must sign in.'},
+  {w:'chair',ph:'/tʃer/',m:'n./v.主持',ex:'Who is chairing the meeting?'},
+  {w:'proposal',ph:'/prəˈpoʊzl/',m:'n.提案',ex:'We have a new proposal.'},
+  {w:'decision',ph:'/dɪˈsɪʒn/',m:'n.决定',ex:'We need to make a decision.'},
+  {w:'vote',ph:'/voʊt/',m:'n./v.投票',ex:'Let us vote on this.'},
+  {w:'consensus',ph:'/kənˈsensəs/',m:'n.共识',ex:'We reached a consensus.'},
+  {w:'objective',ph:'/əbˈdʒektɪv/',m:'n.目标',ex:'What is the objective of this meeting?'},
+  {w:'outcome',ph:'/ˈaʊtkʌm/',m:'n.结果',ex:'The outcome was positive.'}
+ ]},
+ {id:'V22',w:4,t:'会议讨论',d:'10个会议词',words:[
+  {w:'discuss',ph:'/dɪˈskʌs/',m:'v.讨论',ex:'We need to discuss the timeline.'},
+  {w:'point',ph:'/pɔɪnt/',m:'n.要点',ex:'That is a good point.'},
+  {w:'comment',ph:'/ˈkɑːment/',m:'n./v.评论',ex:'Any comments on this?'},
+  {w:'feedback',ph:'/ˈfiːdbæk/',m:'n.反馈',ex:'I need your feedback by Friday.'},
+  {w:'opinion',ph:'/əˈpɪnjən/',m:'n.意见',ex:'What is your opinion?'},
+  {w:'suggest',ph:'/səˈdʒest/',m:'v.建议',ex:'I suggest we postpone.'},
+  {w:'concern',ph:'/kənˈsɜːrn/',m:'n.顾虑',ex:'I have a concern about the budget.'},
+  {w:'clarify',ph:'/ˈklærəfaɪ/',m:'v.澄清',ex:'Could you clarify that?'},
+  {w:'summarize',ph:'/ˈsʌməraɪz/',m:'v.总结',ex:'Let me summarize the key points.'},
+  {w:'conclude',ph:'/kənˈkluːd/',m:'v.结论',ex:'To conclude, we are on track.'}
+ ]},
+ {id:'V23',w:4,t:'会议行动',d:'10个会议词',words:[
+  {w:'action',ph:'/ˈækʃn/',m:'n.行动',ex:'We need an action plan.'},
+  {w:'assign',ph:'/əˈsaɪn/',m:'v.分配',ex:'I assigned the task to Zhang Wei.'},
+  {w:'responsible',ph:'/rɪˈspɑːnsəbl/',m:'adj.负责的',ex:'Who is responsible for this?'},
+  {w:'follow up',ph:'/ˈfɑːloʊ ʌp/',m:'短语跟进',ex:'I will follow up next week.'},
+  {w:'deadline',ph:'/ˈdedlaɪn/',m:'n.截止日期',ex:'The deadline is next Friday.'},
+  {w:'priority',ph:'/praɪˈɔːrəti/',m:'n.优先级',ex:'This is high priority.'},
+  {w:'deliverable',ph:'/dɪˈlɪvərəbl/',m:'n.交付物',ex:'What are the deliverables?'},
+  {w:'milestone',ph:'/ˈmaɪlstoʊn/',m:'n.里程碑',ex:'We reached a major milestone.'},
+  {w:'next step',ph:'/nekst step/',m:'短语下一步',ex:'What are the next steps?'},
+  {w:'commit',ph:'/kəˈmɪt/',m:'v.承诺',ex:'I commit to delivering on time.'}
+ ]},
+ {id:'V24',w:4,t:'会议类型',d:'10个会议词',words:[
+  {w:'standup',ph:'/ˈstændʌp/',m:'n.站会',ex:'We have a daily standup at 9 AM.'},
+  {w:'briefing',ph:'/ˈbriːfɪŋ/',m:'n.简报会',ex:'The project briefing is at 10.'},
+  {w:'workshop',ph:'/ˈwɜːrkʃɑːp/',m:'n.研讨会',ex:'We are holding a workshop.'},
+  {w:'conference',ph:'/ˈkɑːnfərəns/',m:'n.大会',ex:'I attended a conference last week.'},
+  {w:'webinar',ph:'/ˈwebɪnɑːr/',m:'n.网络研讨会',ex:'Join the webinar at 2 PM.'},
+  {w:'one-on-one',ph:'/wʌn ɒn wʌn/',m:'一对一会议',ex:'Let us have a one-on-one.'},
+  {w:'kickoff',ph:'/ˈkɪkɔːf/',m:'n.启动会',ex:'The project kickoff is Monday.'},
+  {w:'review',ph:'/rɪˈvjuː/',m:'n.评审会',ex:'The design review is tomorrow.'},
+  {w:'retrospective',ph:'/ˌretrəˈspektɪv/',m:'n.回顾会',ex:'Sprint retrospective is Friday.'},
+  {w:'sync',ph:'/sɪŋk/',m:'n.同步会',ex:'Let us have a quick sync.'}
+ ]},
+ {id:'V25',w:4,t:'会议复习',d:'10个会议词',words:[
+  {w:'attend',ph:'/əˈtend/',m:'v.出席',ex:'I will attend the meeting.'},
+  {w:'present',ph:'/prɪˈzent/',m:'v.展示',ex:'I will present the data.'},
+  {w:'raise',ph:'/reɪz/',m:'v.提出',ex:'I want to raise an issue.'},
+  {w:'address',ph:'/əˈdres/',m:'v.处理',ex:'We need to address this issue.'},
+  {w:'resolve',ph:'/rɪˈzɑːlv/',m:'v.解决',ex:'The issue was resolved.'},
+  {w:'postpone',ph:'/poʊstˈpoʊn/',m:'v.推迟',ex:'The meeting is postponed.'},
+  {w:'cancel',ph:'/ˈkænsl/',m:'v.取消',ex:'The meeting was canceled.'},
+  {w:'schedule',ph:'/ˈskedʒuːl/',m:'n./v.安排',ex:'Let me schedule a new meeting.'},
+  {w:'prepare',ph:'/prɪˈper/',m:'v.准备',ex:'I need to prepare the slides.'},
+  {w:'record',ph:'/rɪˈkɔːrd/',m:'v.记录',ex:'The meeting was recorded.'}
+ ]},
+ // Week 6 - Email & Communication
+ {id:'V26',w:5,t:'邮件基础',d:'10个邮件词',words:[
+  {w:'subject',ph:'/ˈsʌbdʒekt/',m:'n.主题',ex:'The subject line is clear.'},
+  {w:'attach',ph:'/əˈtætʃ/',m:'v.附上',ex:'I attached the report.'},
+  {w:'attachment',ph:'/əˈtætʃmənt/',m:'n.附件',ex:'Please find the attachment.'},
+  {w:'forward',ph:'/ˈfɔːrwərd/',m:'v.转发',ex:'I forwarded the email to you.'},
+  {w:'reply',ph:'/rɪˈplaɪ/',m:'n./v.回复',ex:'Please reply to all.'},
+  {w:'CC',ph:'/ˌsiːˈsiː/',m:'n.抄送',ex:'Please CC your manager.'},
+  {w:'BCC',ph:'/ˌbiːˌsiːˈsiː/',m:'n.密送',ex:'I BCC\'d the director.'},
+  {w:'recipient',ph:'/rɪˈsɪpiənt/',m:'n.收件人',ex:'The recipient is not available.'},
+  {w:'sender',ph:'/ˈsendər/',m:'n.发件人',ex:'The sender is unknown.'},
+  {w:'draft',ph:'/dræft/',m:'n.草稿',ex:'I saved it as a draft.'}
+ ]},
+ {id:'V27',w:5,t:'邮件动词',d:'10个邮件词',words:[
+  {w:'send',ph:'/send/',m:'v.发送',ex:'I will send the email now.'},
+  {w:'receive',ph:'/rɪˈsiːv/',m:'v.收到',ex:'I received your email.'},
+  {w:'confirm',ph:'/kənˈfɜːrm/',m:'v.确认',ex:'Please confirm receipt.'},
+  {w:'request',ph:'/rɪˈkwest/',m:'n./v.请求',ex:'I have a request.'},
+  {w:'remind',ph:'/rɪˈmaɪnd/',m:'v.提醒',ex:'Let me remind you about the meeting.'},
+  {w:'inform',ph:'/ɪnˈfɔːrm/',m:'v.通知',ex:'I am writing to inform you.'},
+  {w:'apologize',ph:'/əˈpɑːlədʒaɪz/',m:'v.道歉',ex:'I apologize for the delay.'},
+  {w:'appreciate',ph:'/əˈpriːʃieɪt/',m:'v.感谢',ex:'I appreciate your help.'},
+  {w:'mention',ph:'/ˈmenʃn/',m:'v.提及',ex:'You mentioned the issue yesterday.'},
+  {w:'ensure',ph:'/ɪnˈʃʊr/',m:'v.确保',ex:'Please ensure the data is correct.'}
+ ]},
+ {id:'V28',w:5,t:'邮件短语',d:'10个邮件词',words:[
+  {w:'regards',ph:'/rɪˈɡɑːrdz/',m:'问候语致敬',ex:'Best regards, Li Ming'},
+  {w:'sincerely',ph:'/sɪnˈsɪrli/',m:'adv.诚挚地',ex:'Sincerely yours,'},
+  {w:'looking forward',ph:'/ˈlʊkɪŋ ˈfɔːrwərd/',m:'期待',ex:'Looking forward to your reply.'},
+  {w:'please find',ph:'/pliːz faɪnd/',m:'请查收',ex:'Please find attached the report.'},
+  {w:'as per',ph:'/æz pɜːr/',m:'按照',ex:'As per our discussion,'},
+  {w:'for your reference',ph:'/fɔːr jɔːr ˈrefrəns/',m:'供您参考',ex:'For your reference, I attached the file.'},
+  {w:'do not hesitate',ph:'/duː nɑːt ˈhezɪteɪt/',m:'不要犹豫',ex:'Do not hesitate to contact me.'},
+  {w:'in advance',ph:'/ɪn ədˈvæns/',m:'提前',ex:'Thank you in advance.'},
+  {w:'on behalf of',ph:'/ɑːn bɪˈhæf ʌv/',m:'代表',ex:'On behalf of the team,'},
+  {w:'follow up',ph:'/ˈfɑːloʊ ʌp/',m:'跟进',ex:'I am following up on my email.'}
+ ]},
+ {id:'V29',w:5,t:'电话沟通',d:'10个电话词',words:[
+  {w:'call',ph:'/kɔːl/',m:'n./v.电话',ex:'I will call you back.'},
+  {w:'dial',ph:'/ˈdaɪəl/',m:'v.拨号',ex:'Dial 9 for outside line.'},
+  {w:'hold',ph:'/hoʊld/',m:'v.保持；等待',ex:'Please hold the line.'},
+  {w:'transfer',ph:'/trænsˈfɜːr/',m:'v.转接',ex:'I will transfer you to IT.'},
+  {w:'voicemail',ph:'/ˈvɔɪsmeɪl/',m:'n.语音信箱',ex:'I left a voicemail.'},
+  {w:'speaker',ph:'/ˈspiːkər/',m:'n.免提',ex:'Put it on speaker.'},
+  {w:'connection',ph:'/kəˈnekʃn/',m:'n.连接',ex:'The connection is bad.'},
+  {w:'hang up',ph:'/hæŋ ʌp/',m:'挂断',ex:'Don\'t hang up yet.'},
+  {w:'reach',ph:'/riːtʃ/',m:'v.联系到',ex:'I could not reach him.'},
+  {w:'return call',ph:'/rɪˈtɜːrn kɔːl/',m:'回电',ex:'I will return your call.'}
+ ]},
+ {id:'V30',w:5,t:'沟通复习',d:'10个沟通词',words:[
+  {w:'communicate',ph:'/kəˈmjuːnɪkeɪt/',m:'v.沟通',ex:'We need to communicate better.'},
+  {w:'clarify',ph:'/ˈklærəfaɪ/',m:'v.澄清',ex:'Could you clarify the requirement?'},
+  {w:'confirm',ph:'/kənˈfɜːrm/',m:'v.确认',ex:'I want to confirm the schedule.'},
+  {w:'notify',ph:'/ˈnoʊtɪfaɪ/',m:'v.通知',ex:'I will notify the team.'},
+  {w:'acknowledge',ph:'/əkˈnɑːlɪdʒ/',m:'v.确认收到',ex:'Please acknowledge receipt.'},
+  {w:'respond',ph:'/rɪˈspɑːnd/',m:'v.回应',ex:'He responded quickly.'},
+  {w:'escalate',ph:'/ˈeskəleɪt/',m:'v.升级(问题)',ex:'I need to escalate this issue.'},
+  {w:'coordinate',ph:'/koʊˈɔːrdɪneɪt/',m:'v.协调',ex:'Let me coordinate with the team.'},
+  {w:'brief',ph:/briːf/||'/briːf/',m:'v.简报',ex:'Let me brief you on the project.'},
+  {w:'update',ph:'/ˈʌpdeɪt/',m:'n./v.更新',ex:'I will give you an update tomorrow.'}
+ ]},
+ // Week 7 - Project & Management
+ {id:'V31',w:6,t:'项目核心',d:'10个项目词',words:[
+  {w:'project',ph:'/ˈprɑːdʒekt/',m:'n.项目',ex:'This is a big project.'},
+  {w:'scope',ph:'/skoʊp/',m:'n.范围',ex:'The scope has changed.'},
+  {w:'budget',ph:'/ˈbʌdʒɪt/',m:'n.预算',ex:'We are within budget.'},
+  {w:'resource',ph:'/ˈriːsɔːrs/',m:'n.资源',ex:'We need more resources.'},
+  {w:'timeline',ph:'/ˈtaɪmlaɪn/',m:'n.时间线',ex:'The timeline is tight.'},
+  {w:'milestone',ph:'/ˈmaɪlstoʊn/',m:'n.里程碑',ex:'We reached the first milestone.'},
+  {w:'deliverable',ph:'/dɪˈlɪvərəbl/',m:'n.交付物',ex:'What are the deliverables?'},
+  {w:'stakeholder',ph:'/ˈsteɪkhoʊldər/',m:'n.干系人',ex:'Who are the stakeholders?'},
+  {w:'scope',ph:'/skoʊp/',m:'n.范围',ex:'This is out of scope.'},
+  {w:'baseline',ph:'/ˈbeɪslaɪn/',m:'n.基线',ex:'We need to set the baseline.'}
+ ]},
+ {id:'V32',w:6,t:'项目状态',d:'10个项目词',words:[
+  {w:'progress',ph:'/ˈprɑːɡres/',m:'n.进展',ex:'We made good progress.'},
+  {w:'on track',ph:'/ɑːn træk/',m:'按计划',ex:'The project is on track.'},
+  {w:'delay',ph:'/dɪˈleɪ/',m:'n./v.延迟',ex:'There is a delay.'},
+  {w:'risk',ph:'/rɪsk/',m:'n.风险',ex:'We identified a risk.'},
+  {w:'issue',ph:'/ˈɪʃuː/',m:'n.问题',ex:'We have an issue.'},
+  {w:'blocker',ph:'/ˈblɑːkər/',m:'n.阻碍',ex:'What is the blocker?'},
+  {w:'pending',ph:'/ˈpendɪŋ/',m:'adj.待定',ex:'The approval is pending.'},
+  {w:'complete',ph:'/kəmˈpliːt/',m:'v.完成',ex:'The task is complete.'},
+  {w:'outstanding',ph:'/aʊtˈstændɪŋ/',m:'adj.未完成的',ex:'There are two outstanding items.'},
+  {w:'critical',ph:'/ˈkrɪtɪkl/',m:'adj.关键的',ex:'This is a critical path.'}
+ ]},
+ {id:'V33',w:6,t:'项目管理',d:'10个项目词',words:[
+  {w:'plan',ph:'/plæn/',m:'n./v.计划',ex:'We need a project plan.'},
+  {w:'execute',ph:'/ˈeksɪkjuːt/',m:'v.执行',ex:'We will execute the plan.'},
+  {w:'monitor',ph:'/ˈmɑːnɪtər/',m:'v.监控',ex:'We monitor the progress weekly.'},
+  {w:'control',ph:'/kənˈtroʊl/',m:'n./v.控制',ex:'We need change control.'},
+  {w:'assign',ph:'/əˈsaɪn/',m:'v.分配',ex:'I assigned the task.'},
+  {w:'delegate',ph:'/ˈdelɪɡeɪt/',m:'v.委派',ex:'I delegated the task to my team.'},
+  {w:'prioritize',ph:'/praɪˈɔːrətaɪz/',m:'v.排序优先',ex:'Let us prioritize the tasks.'},
+  {w:'estimate',ph:'/ˈestɪmeɪt/',m:'v.估算',ex:'I estimate 3 days.'},
+  {w:'track',ph:'/træk/',m:'v.跟踪',ex:'We track all issues.'},
+  {w:'report',ph:'/rɪˈpɔːrt/',m:'n./v.报告',ex:'I will report to the manager.'}
+ ]},
+ {id:'V34',w:6,t:'项目会议',d:'10个项目词',words:[
+  {w:'kickoff',ph:'/ˈkɪkɔːf/',m:'n.启动会',ex:'The kickoff is on Monday.'},
+  {w:'status meeting',ph:'/ˈsteɪtəs ˈmiːtɪŋ/',m:'状态会',ex:'Weekly status meeting at 10.'},
+  {w:'review',ph:'/rɪˈvjuː/',m:'n.评审',ex:'The code review is tomorrow.'},
+  {w:'demo',ph:'/ˈdemoʊ/',m:'n.演示',ex:'We will do a demo on Friday.'},
+  {w:'retro',ph:'/ˈretroʊ/',m:'n.回顾会',ex:'The retro was productive.'},
+  {w:'standup',ph:'/ˈstændʌp/',m:'n.站会',ex:'Daily standup at 9 AM.'},
+  {w:'check-in',ph:'/tʃek ɪn/',m:'签到会',ex:'Let us have a quick check-in.'},
+  {w:'wrap-up',ph:'/ræp ʌp/',m:'总结会',ex:'The wrap-up meeting went well.'},
+  {w:'debrief',ph:'/diːˈbriːf/',m:'n.汇报会',ex:'We need a debrief after the audit.'},
+  {w:'follow-up',ph:'/ˈfɑːloʊ ʌp/',m:'跟进会',ex:'Schedule a follow-up meeting.'}
+ ]},
+ {id:'V35',w:6,t:'项目复习',d:'10个项目词',words:[
+  {w:'goal',ph:'/ɡoʊl/',m:'n.目标',ex:'Our goal is to deliver on time.'},
+  {w:'objective',ph:/əbˈdʒektɪv/||'/əbˈdʒektɪv/',m:'n.目标',ex:'What are the objectives?'},
+  {w:'target',ph:'/ˈtɑːrɡɪt/',m:'n.目标',ex:'We met the target.'},
+  {w:'achieve',ph:'/əˈtʃiːv/',m:'v.达成',ex:'We achieved our goal.'},
+  {w:'measure',ph:'/ˈmeʒər/',m:'v.衡量',ex:'How do we measure success?'},
+  {w:'metric',ph:'/ˈmetrɪk/',m:'n.指标',ex:'What metrics are we tracking?'},
+  {w:'KPI',ph:'/ˌkeɪ piː ˈaɪ/',m:'关键指标',ex:'Our KPI is customer satisfaction.'},
+  {w:'quality',ph:'/ˈkwɑːləti/',m:'n.质量',ex:'Quality is our top priority.'},
+  {w:'standard',ph:'/ˈstændərd/',m:'n.标准',ex:'We meet the industry standard.'},
+  {w:'success',ph:'/səkˈses/',m:'n.成功',ex:'The project was a success.'}
+ ]},
+ // Week 8 - Negotiation & Agreement
+ {id:'V36',w:7,t:'谈判核心',d:'10个谈判词',words:[
+  {w:'negotiate',ph:'/nɪˈɡoʊʃieɪt/',m:'v.谈判',ex:'We need to negotiate the terms.'},
+  {w:'offer',ph:'/ˈɔːfər/',m:'n./v.报价',ex:'This is our best offer.'},
+  {w:'counter',ph:'/ˈkaʊntər/',m:'n./v.还价',ex:'I will make a counter-offer.'},
+  {w:'accept',ph:'/əkˈsept/',m:'v.接受',ex:'I accept the offer.'},
+  {w:'reject',ph:'/rɪˈdʒekt/',m:'v.拒绝',ex:'We reject the proposal.'},
+  {w:'compromise',ph:'/ˈkɑːmprəmaɪz/',m:'n./v.妥协',ex:'We reached a compromise.'},
+  {w:'term',ph:'/tɜːrm/',m:'n.条款',ex:'The terms are acceptable.'},
+  {w:'condition',ph:'/kənˈdɪʃn/',m:'n.条件',ex:'Under what conditions?'},
+  {w:'deal',ph:'/diːl/',m:'n.交易',ex:'It is a deal.'},
+  {w:'contract',ph:'/ˈkɑːntrækt/',m:'n.合同',ex:'The contract is signed.'}
+ ]},
+ {id:'V37',w:7,t:'谈判策略',d:'10个谈判词',words:[
+  {w:'propose',ph:'/prəˈpoʊz/',m:'v.提议',ex:'I propose a new timeline.'},
+  {w:'concession',ph:'/kənˈseʃn/',m:'n.让步',ex:'We made a concession.'},
+  {w:'leverage',ph:'/ˈlevərɪdʒ/',m:'n.筹码',ex:'We have leverage in this deal.'},
+  {w:'bargain',ph:'/ˈbɑːrɡən/',m:'n./v.讨价还价',ex:'Let us bargain fairly.'},
+  {w:'demand',ph:'/dɪˈmænd/',m:'n./v.要求',ex:'Their demands are too high.'},
+  {w:'persuade',ph:'/pərˈsweɪd/',m:'v.说服',ex:'I persuaded the client.'},
+  {w:'insist',ph:'/ɪnˈsɪst/',m:'v.坚持',ex:'I insist on quality.'},
+  {w:'concede',ph:'/kənˈsiːd/',m:'v.让步',ex:'I will concede on this point.'},
+  {w:'stand firm',ph:'/stænd fɜːrm/',m:'坚持立场',ex:'We stand firm on the deadline.'},
+  {w:'walk away',ph:'/wɔːk əˈweɪ/',m:'离开谈判',ex:'We can walk away if needed.'}
+ ]},
+ {id:'V38',w:7,t:'合同与协议',d:'10个谈判词',words:[
+  {w:'agreement',ph:'/əˈɡriːmənt/',m:'n.协议',ex:'We signed the agreement.'},
+  {w:'clause',ph:'/klɔːz/',m:'n.条款',ex:'There is a penalty clause.'},
+  {w:'sign',ph:'/saɪn/',m:'v.签署',ex:'Please sign here.'},
+  {w:'valid',ph:'/ˈvælɪd/',m:'adj.有效的',ex:'The contract is valid for one year.'},
+  {w:'expire',ph:'/ɪkˈspaɪər/',m:'v.到期',ex:'The contract expires in December.'},
+  {w:'renew',ph:'/rɪˈnuː/',m:'v.续约',ex:'We want to renew the contract.'},
+  {w:'terminate',ph:'/ˈtɜːrmɪneɪt/',m:'v.终止',ex:'Either party can terminate.'},
+  {w:'amend',ph:'/əˈmend/',m:'v.修改',ex:'We need to amend the contract.'},
+  {w:'comply',ph:'/kəmˈplaɪ/',m:'v.遵守',ex:'We must comply with the terms.'},
+  {w:'breach',ph:/briːtʃ/||'/briːtʃ/',m:'n./v.违约',ex:'This is a breach of contract.'}
+ ]},
+ {id:'V39',w:7,t:'商务关系',d:'10个谈判词',words:[
+  {w:'partnership',ph:'/ˈpɑːrtnərʃɪp/',m:'n.合作关系',ex:'We have a strong partnership.'},
+  {w:'collaborate',ph:'/kəˈlæbəreɪt/',m:'v.合作',ex:'Let us collaborate on this.'},
+  {w:'vendor',ph:'/ˈvendər/',m:'n.供应商',ex:'We changed our vendor.'},
+  {w:'supplier',ph:'/səˈplaɪər/',m:'n.供应商',ex:'The supplier delivered on time.'},
+  {w:'proposal',ph:'/prəˈpoʊzl/',m:'n.提案',ex:'We submitted the proposal.'},
+  {w:'quotation',ph:'/kwoʊˈteɪʃn/',m:'n.报价单',ex:'Please send the quotation.'},
+  {w:'invoice',ph:'/ˈɪnvɔɪs/',m:'n.发票',ex:'The invoice is due in 30 days.'},
+  {w:'payment',ph:'/ˈpeɪmənt/',m:'n.付款',ex:'Payment is due on Friday.'},
+  {w:'discount',ph:'/ˈdɪskaʊnt/',m:'n.折扣',ex:'Can you offer a discount?'},
+  {w:'refund',ph:'/ˈriːfʌnd/',m:'n./v.退款',ex:'We will process the refund.'}
+ ]},
+ {id:'V40',w:7,t:'谈判复习',d:'10个谈判词',words:[
+  {w:'discuss',ph:'/dɪˈskʌs/',m:'v.讨论',ex:'Let us discuss the details.'},
+  {w:'consider',ph:'/kənˈsɪdər/',m:'v.考虑',ex:'I will consider your offer.'},
+  {w:'decide',ph:'/dɪˈsaɪd/',m:'v.决定',ex:'We decided to proceed.'},
+  {w:'confirm',ph:'/kənˈfɜːrm/',m:'v.确认',ex:'I confirm the final terms.'},
+  {w:'finalize',ph:'/ˈfaɪnəlaɪz/',m:'v.最终确定',ex:'Let us finalize the agreement.'},
+  {w:'proceed',ph:'/proʊˈsiːd/',m:'v.继续',ex:'We will proceed with the plan.'},
+  {w:'agree',ph:'/əˈɡriː/',m:'v.同意',ex:'We agree on all terms.'},
+  {w:'disagree',ph:'/ˌdɪsəˈɡriː/',m:'v.不同意',ex:'I disagree with the price.'},
+  {w:'mutual',ph:'/ˈmjuːtʃuəl/',m:'adj.双方的',ex:'It is a mutual benefit.'},
+  {w:'benefit',ph:'/ˈbenɪfɪt/',m:'n.利益',ex:'Both parties benefit.'}
+ ]},
+ // Week 9 - Clinical Research Basics
+ {id:'V41',w:8,t:'临床试验基础',d:'10个临床词',words:[
+  {w:'clinical trial',ph:'/ˈklɪnɪkl traɪəl/',m:'临床试验',ex:'This is a Phase III clinical trial.'},
+  {w:'protocol',ph:'/ˈproʊtəkɑːl/',m:'n.方案',ex:'The protocol was approved by the IRB.'},
+  {w:'subject',ph:'/ˈsʌbdʒekt/',m:'n.受试者',ex:'100 subjects were enrolled.'},
+  {w:'patient',ph:'/ˈpeɪʃn༨/',m:'n.患者',ex:'Patient safety is our priority.'},
+  {w:'investigator',ph:'/ɪnˈvestɪɡeɪtər/',m:'n.研究者',ex:'The principal investigator leads the study.'},
+  {w:'sponsor',ph:'/ˈspɑːnsər/',m:'n.申办方',ex:'The sponsor funded the trial.'},
+  {w:'phase',ph:'/feɪz/',m:'n.期(研究阶段)',ex:'We are in Phase II.'},
+  {w:'site',ph:'/saɪt/',m:'n.研究中心',ex:'We have 5 study sites.'},
+  {w:'enrollment',ph:'/ɪnˈroʊlmənt/',m:'n.入组',ex:'Enrollment is ahead of schedule.'},
+  {w:'informed consent',ph:'/ɪnˈfɔːrmd kənˈsent/',m:'知情同意',ex:'Subjects signed the informed consent.'}
+ ]},
+ {id:'V42',w:8,t:'临床数据',d:'10个临床词',words:[
+  {w:'data',ph:'/ˈdeɪtə/',m:'n.数据',ex:'The data looks accurate.'},
+  {w:'database',ph:'/ˈdeɪtəbeɪs/',m:'n.数据库',ex:'The database is locked.'},
+  {w:'eCRF',ph:'/ˌiː siː ɑːr ˈef/',m:'电子病例报告表',ex:'Enter data into the eCRF.'},
+  {w:'EDC',ph:'/ˌiː diː ˈsiː/',m:'电子数据采集',ex:'Please use the EDC system.'},
+  {w:'query',ph:'/ˈkwɪri/',m:'n.质疑',ex:'There are 3 open queries.'},
+  {w:'entry',ph:'/ˈentri/',m:'n.录入',ex:'Data entry must be accurate.'},
+  {w:'verification',ph:'/ˌverɪfɪˈkeɪʃn/',m:'n.核实',ex:'Source data verification is done.'},
+  {w:'accuracy',ph:'/ˈækjərəsi/',m:'n.准确性',ex:'We need to ensure data accuracy.'},
+  {w:'audit trail',ph:'/ˈɔːdɪt treɪl/',m:'审计追踪',ex:'The audit trail is enabled.'},
+  {w:'lock',ph:'/lɑːk/',m:'n./v.锁定',ex:'The database lock is scheduled.'}
+ ]},
+ {id:'V43',w:8,t:'临床安全',d:'10个临床词',words:[
+  {w:'adverse event',ph:'/ˈædvɜːrs ɪˈvent/',m:'不良事件',ex:'All adverse events must be reported.'},
+  {w:'SAE',ph:'/ˌes eɪ ˈiː/',m:'严重不良事件',ex:'The SAE was reported within 24 hours.'},
+  {w:'safety',ph:'/ˈseɪfti/',m:'n.安全性',ex:'Patient safety is paramount.'},
+  {w:'side effect',ph:'/saɪd ɪˈfekt/',m:'副作用',ex:'What are the side effects?'},
+  {w:'risk',ph:'/rɪsk/',m:'n.风险',ex:'We need a risk assessment.'},
+  {w:'monitoring',ph:'/ˈmɑːnɪtərɪŋ/',m:'n.监查',ex:'The CRA is doing site monitoring.'},
+  {w:'CRA',ph:'/ˌsiː ɑːr ˈeɪ/',m:'临床监查员',ex:'The CRA visits the site monthly.'},
+  {w:'report',ph:'/rɪˈpɔːrt/',m:'n.报告',ex:'Submit the safety report.'},
+  {w:'regulatory',ph:'/ˈreɡjələtɔːri/',m:'adj.监管的',ex:'Regulatory approval is needed.'},
+  {w:'compliance',ph:'/kəmˈplaɪəns/',m:'n.合规',ex:'We must ensure compliance.'}
+ ]},
+ {id:'V44',w:8,t:'临床角色',d:'10个临床词',words:[
+  {w:'PI',ph:'/ˌpiː ˈaɪ/',m:'主要研究者',ex:'The PI is responsible for the study.'},
+  {w:'Sub-I',ph:'/sʌb ˈaɪ/',m:'次要研究者',ex:'The Sub-I sees patients today.'},
+  {w:'coordinator',ph:'/koʊˈɔːrdɪneɪtər/',m:'n.协调员',ex:'The study coordinator schedules visits.'},
+  {w:'CRO',ph:'/ˌsiː ɑːr ˈoʊ/',m:'合同研究组织',ex:'We outsourced to a CRO.'},
+  {w:'ethics committee',ph:'/ˈeθɪks kəˈmɪti/',m:'伦理委员会',ex:'The ethics committee approved it.'},
+  {w:'IRB',ph:'/ˌaɪ ɑːr ˈbiː/',m:'机构审查委员会',ex:'IRB approval is required.'},
+  {w:'FDA',ph:'/ˌef diː ˈeɪ/',m:'美国食品药品监督管理局',ex:'The FDA approved the drug.'},
+  {w:'NMPA',ph:'/ˌen em piː ˈeɪ/',m:'国家药监局',ex:'NMPA is the Chinese regulator.'},
+  {w:'monitor',ph:'/ˈmɑːnɪtər/',m:'n.监查员',ex:'The monitor checked the source data.'},
+  {w:'pharmacist',ph:'/ˈfɑːrməsɪst/',m:'n.药师',ex:'The pharmacist dispensed the drug.'}
+ ]},
+ {id:'V45',w:8,t:'临床复习',d:'10个临床词',words:[
+  {w:'randomize',ph:'/ˈrændəmaɪz/',m:'v.随机化',ex:'Subjects were randomized into two groups.'},
+  {w:'placebo',ph:'/pləˈsiːboʊ/',m:'n.安慰剂',ex:'The control group received placebo.'},
+  {w:'dosage',ph:'/ˈdoʊsɪdʒ/',m:'n.剂量',ex:'What is the recommended dosage?'},
+  {w:'efficacy',ph:'/ˈefɪkəsi/',m:'n.有效性',ex:'The efficacy data is promising.'},
+  {w:'endpoint',ph:'/ˈendpɔɪnt/',m:'n.终点',ex:'The primary endpoint was met.'},
+  {w:'visit',ph:'/ˈvɪzɪt/',m:'n.访视',ex:'The next visit is in two weeks.'},
+  {w:'screening',ph:'/ˈskriːnɪŋ/',m:'n.筛选',ex:'Screening starts next Monday.'},
+  {w:'treatment',ph:'/ˈtriːtmənt/',m:'n.治疗',ex:'The treatment period is 12 weeks.'},
+  {w:'follow-up',ph:'/ˈfɑːloʊ ʌp/',m:'n.随访',ex:'Follow-up visits are monthly.'},
+  {w:'dropout',ph:'/ˈdrɑˌpaʊt/',m:'n.退出',ex:'The dropout rate is low.'}
+ ]},
+ // Week 10 - Computer System Validation
+ {id:'V46',w:9,t:'验证基础',d:'10个CSV词',words:[
+  {w:'validation',ph:'/ˌvælɪˈdeɪʃn/',m:'n.验证',ex:'The system needs validation.'},
+  {w:'qualification',ph:'/ˌkwɑːlɪfɪˈkeɪʃn/',m:'n.确认',ex:'Installation Qualification is done.'},
+  {w:'IQ',ph:'/ˌaɪ ˈkjuː/',m:'安装确认',ex:'IQ was completed successfully.'},
+  {w:'OQ',ph:'/ˌoʊ ˈkjuː/',m:'运行确认',ex:'OQ tests the system functions.'},
+  {w:'PQ',ph:'/ˌpiː ˈkjuː/',m:'性能确认',ex:'PQ is the final step.'},
+  {w:'UAT',ph:'/juː eɪ ˈtiː/',m:'用户验收测试',ex:'UAT starts next week.'},
+  {w:'GAMP 5',ph:'/ɡæmp faɪv/',m:'GAMP 5指南',ex:'We follow GAMP 5 methodology.'},
+  {w:'CSV',ph:'/ˌsiː es ˈviː/',m:'计算机系统验证',ex:'CSV is required for GxP systems.'},
+  {w:'traceability',ph:'/ˌtreɪsəˈbɪləti/',m:'n.可追溯性',ex:'The traceability matrix is complete.'},
+  {w:'evidence',ph:'/ˈevɪdəns/',m:'n.证据',ex:'We need validation evidence.'}
+ ]},
+ {id:'V47',w:9,t:'需求与规范',d:'10个CSV词',words:[
+  {w:'requirement',ph:'/rɪˈkwaɪərmənt/',m:'n.需求',ex:'The user requirements are documented.'},
+  {w:'URS',ph:'/ˌjuː ɑːr ˈes/',m:'用户需求规范',ex:'The URS defines what users need.'},
+  {w:'functional',ph:'/ˈfʌŋkʃənl/',m:'adj.功能的',ex:'The functional spec is approved.'},
+  {w:'specification',ph:'/ˌspesɪfɪˈkeɪʃn/',m:'n.规范',ex:'The design specification is ready.'},
+  {w:'design',ph:'/dɪˈzaɪn/',m:'n./v.设计',ex:'The design was reviewed.'},
+  {w:'configuration',ph:'/kənˌfɪɡjəˈreɪʃn/',m:'n.配置',ex:'The system configuration is complete.'},
+  {w:'customization',ph:'/ˌkʌstəməˈzeɪʃn/',m:'n.定制',ex:'Minimal customization is preferred.'},
+  {w:'requirement traceability',ph:'/rɪˈkwaɪərmənt ˌtreɪsəˈbɪləti/',m:'需求追溯',ex:'The RTM links tests to requirements.'},
+  {w:'critical',ph:'/ˈkrɪtɪkl/',m:'adj.关键的',ex:'This is a critical requirement.'},
+  {w:'mandatory',ph:'/ˈmændətɔːri/',m:'adj.强制的',ex:'Training is mandatory.'}
+ ]},
+ {id:'V48',w:9,t:'测试与执行',d:'10个CSV词',words:[
+  {w:'test',ph:'/test/',m:'n./v.测试',ex:'We need to test the system.'},
+  {w:'test script',ph:'/test skrɪpt/',m:'测试脚本',ex:'The test script is approved.'},
+  {w:'test case',ph:'/test keɪs/',m:'测试用例',ex:'Each test case has expected results.'},
+  {w:'execute',ph:'/ˈeksɪkjuːt/',m:'v.执行',ex:'We executed all test scripts.'},
+  {w:'expected result',ph:'/ɪkˈspektɪd rɪˈzʌlt/',m:'预期结果',ex:'The actual result matches the expected.'},
+  {w:'actual result',ph:'/ˈæktʃuəl rɪˈzʌlt/',m:'实际结果',ex:'The actual result is correct.'},
+  {w:'pass',ph:'/pæs/',m:'v.通过',ex:'All tests passed.'},
+  {w:'fail',ph:'/feɪl/',m:'v.失败',ex:'One test failed.'},
+  {w:'defect',ph:'/ˈdiːfekt/',m:'n.缺陷',ex:'A defect was identified.'},
+  {w:'retest',ph:'/riːˈtest/',m:'n./v.重测',ex:'We need to retest after the fix.'}
+ ]},
+ {id:'V49',w:9,t:'偏差与变更',d:'10个CSV词',words:[
+  {w:'deviation',ph:'/ˌdiːviˈeɪʃn/',m:'n.偏差',ex:'A deviation was logged.'},
+  {w:'change control',ph:'/tʃeɪndʒ kənˈtroʊl/',m:'变更控制',ex:'All changes go through change control.'},
+  {w:'CAPA',ph:'/ˈkæpə/',m:'纠正与预防措施',ex:'A CAPA was initiated.'},
+  {w:'corrective',ph:'/kəˈrɛktɪv/',m:'adj.纠正的',ex:'Corrective actions were taken.'},
+  {w:'preventive',ph:'/prɪˈventɪv/',m:'adj.预防的',ex:'Preventive measures are in place.'},
+  {w:'root cause',ph:'/ruːt kɔːz/',m:'根本原因',ex:'We identified the root cause.'},
+  {w:'impact',ph:'/ˈɪmpækt/',m:'n.影响',ex:'What is the impact of this change?'},
+  {w:'assessment',ph:'/əˈsesmənt/',m:'n.评估',ex:'A risk assessment is needed.'},
+  {w:'mitigation',ph:'/ˌmɪtɪˈɡeɪʃn/',m:'n.缓解',ex:'Risk mitigation is in place.'},
+  {w:'discrepancy',ph:'/dɪsˈkrepənsi/',m:'n.差异',ex:'We found a discrepancy in the data.'}
+ ]},
+ {id:'V50',w:9,t:'验证复习',d:'10个CSV词',words:[
+  {w:'document',ph:'/ˈdɑːkjumənt/',m:'n.文件；v.记录',ex:'Document all test results.'},
+  {w:'procedure',ph:'/prəˈsiːdʒər/',m:'n.程序',ex:'Follow the standard procedure.'},
+  {w:'SOP',ph:'/ˌes oʊ ˈpiː/',m:'标准操作规程',ex:'All SOPs must be current.'},
+  {w:'plan',ph:'/plæn/',m:'n.计划',ex:'The validation plan is approved.'},
+  {w:'summary',ph:'/ˈsʌməri/',m:'n.总结',ex:'The validation summary report is ready.'},
+  {w:'report',ph:'/rɪˈpɔːrt/',m:'n.报告',ex:'The test report is signed.'},
+  {w:'release',ph:'/rɪˈliːs/',m:'n./v.放行',ex:'The system is released for use.'},
+  {w:'retire',ph:'/rɪˈtaɪər/',m:'v.退役',ex:'The old system will be retired.'},
+  {w:'migration',ph:'/maɪˈɡreɪʃn/',m:'n.迁移',ex:'Data migration is planned.'},
+  {w:'maintenance',ph:'/ˈmeɪntənəns/',m:'n.维护',ex:'System maintenance is scheduled.'}
+ ]},
+ // Week 11 - GxP & Compliance
+ {id:'V51',w:10,t:'GxP基础',d:'10个合规词',words:[
+  {w:'GxP',ph:'/ˌdʒiː ɛks ˈpiː/',m:'GxP质量管理规范',ex:'This is a GxP regulated system.'},
+  {w:'GCP',ph:'/ˌdʒiː siː ˈpiː/',m:'临床试验质量管理规范',ex:'We comply with GCP guidelines.'},
+  {w:'GLP',ph:'/ˌdʒiː ɛl ˈpiː/',m:'药物非临床研究质量管理规范',ex:'The lab follows GLP standards.'},
+  {w:'GMP',ph:'/ˌdʒiː ɛm ˈpiː/',m:'药品生产质量管理规范',ex:'The factory is GMP certified.'},
+  {w:'compliance',ph:'/kəmˈplaɪəns/',m:'n.合规',ex:'Compliance is mandatory.'},
+  {w:'regulatory',ph:'/ˈreɡjələtɔːri/',m:'adj.监管的',ex:'Regulatory requirements must be met.'},
+  {w:'guideline',ph:'/ˈɡaɪdlaɪn/',m:'n.指南',ex:'Follow the ICH guidelines.'},
+  {w:'standard',ph:'/ˈstændərd/',m:'n.标准',ex:'We meet international standards.'},
+  {w:'policy',ph:'/ˈpɑːləsi/',m:'n.政策',ex:'Our quality policy is clear.'},
+  {w:'requirement',ph:'/rɪˈkwaɪərmənt/',m:'n.要求',ex:'This is a regulatory requirement.'}
+ ]},
+ {id:'V52',w:10,t:'审计与检查',d:'10个合规词',words:[
+  {w:'audit',ph:'/ˈɔːdɪt/',m:'n.审计',ex:'The audit is next week.'},
+  {w:'inspection',ph:'/ɪnˈspekʃn/',m:'n.检查',ex:'The FDA inspection went well.'},
+  {w:'auditor',ph:'/ˈɔːdɪtər/',m:'n.审计员',ex:'The auditor reviewed our SOPs.'},
+  {w:'finding',ph:'/ˈfaɪndɪŋ/',m:'n.发现项',ex:'There were no critical findings.'},
+  {w:'observation',ph:'/ˌɑːbzərˈveɪʃn/',m:'n.观察项',ex:'The auditor noted one observation.'},
+  {w:'deficiency',ph:'/dɪˈfɪʃnsi/',m:'n.缺陷',ex:'No deficiencies were found.'},
+  {w:'corrective action',ph:'/kəˈrɛktɪv ˈækʃn/',m:'纠正措施',ex:'Corrective actions were implemented.'},
+  {w:'response',ph:'/rɪˈspɑːns/',m:'n.回复',ex:'We submitted our response.'},
+  {w:'follow-up',ph:'/ˈfɑːloʊ ʌp/',m:'n.跟踪',ex:'A follow-up audit is scheduled.'},
+  {w:'closure',ph:'/ˈkloʊʒər/',m:'n.关闭',ex:'All findings are under closure.'}
+ ]},
+ {id:'V53',w:10,t:'SOP与文件',d:'10个合规词',words:[
+  {w:'SOP',ph:'/ˌes oʊ ˈpiː/',m:'标准操作规程',ex:'All procedures are documented in SOPs.'},
+  {w:'document',ph:'/ˈdɑːkjumənt/',m:'n.文件',ex:'This document is controlled.'},
+  {w:'record',ph:'/ˈrekərd/',m:'n.记录',ex:'All records must be retained.'},
+  {w:'version',ph:'/ˈvɜːrʒn/',m:'n.版本',ex:'Use the current version.'},
+  {w:'revision',ph:'/rɪˈvɪʒn/',m:'n.修订',ex:'Revision 3 is the latest.'},
+  {w:'approve',ph:'/əˈpruːv/',m:'v.批准',ex:'The SOP was approved by QA.'},
+  {w:'effective',ph:'/ɪˈfektɪv/',m:'adj.生效的',ex:'The new SOP is effective today.'},
+  {w:'obsolete',ph:'/ˌɑːbsəˈliːt/',m:'adj.废止的',ex:'The old version is obsolete.'},
+  {w:'archive',ph:'/ˈɑːrkaɪv/',m:'n./v.归档',ex:'Old records are archived.'},
+  {w:'retention',ph:'/rɪˈtenʃn/',m:'n.保存(期限)',ex:'The retention period is 10 years.'}
+ ]},
+ {id:'V54',w:10,t:'数据完整性',d:'10个合规词',words:[
+  {w:'data integrity',ph:'/ˈdeɪtə ɪnˈteɡrəti/',m:'数据完整性',ex:'Data integrity is critical.'},
+  {w:'ALCOA',ph:'/ˈælkoʊə/',m:'ALCOA原则',ex:'Data must follow ALCOA principles.'},
+  {w:'attributable',ph:'/əˈtrɪbjuːtəbl/',m:'adj.可归属的',ex:'Data must be attributable to a person.'},
+  {w:'legible',ph:'/ˈledʒəbl/',m:'adj.清晰的',ex:'Records must be legible.'},
+  {w:'contemporaneous',ph:'/kənˌtempəˈreɪniəs/',m:'adj.同时的',ex:'Data entry must be contemporaneous.'},
+  {w:'original',ph:'/əˈrɪdʒənl/',m:'adj.原始的',ex:'Original records are required.'},
+  {w:'accurate',ph:'/ˈækjərət/',m:'adj.准确的',ex:'Data must be accurate.'},
+  {w:'complete',ph:'/kəmˈpliːt/',m:'adj.完整的',ex:'All data must be complete.'},
+  {w:'consistent',ph:'/kənˈsɪstənt/',m:'adj.一致的',ex:'Data must be consistent.'},
+  {w:'enduring',ph:'/ɪnˈdʊrɪŋ/',m:'adj.持久的',ex:'Records must be enduring.'}
+ ]},
+ {id:'V55',w:10,t:'合规复习',d:'10个合规词',words:[
+  {w:'21 CFR Part 11',ph:'/twenti wʌn siː ef ɑːr pɑːrt ɪˈlevən/',m:'美国电子记录法规',ex:'The system is 21 CFR Part 11 compliant.'},
+  {w:'electronic signature',ph:'/ɪˌlekˈtrɑːnɪk ˈsɪɡnətʃər/',m:'电子签名',ex:'Electronic signatures are used.'},
+  {w:'audit trail',ph:'/ˈɔːdɪt treɪl/',m:'审计追踪',ex:'The audit trail cannot be disabled.'},
+  {w:'access control',ph:'/ˈækses kənˈtroʊl/',m:'权限控制',ex:'Access control is role-based.'},
+  {w:'authorization',ph:'/ˌɔːθərəˈzeɪʃn/',m:'n.授权',ex:'Only authorized users can access.'},
+  {w:'authentication',ph:/ɔːˌθentɪˈkeɪʃn/||'/ɔːˌθentɪˈkeɪʃn/',m:'n.认证',ex:'Two-factor authentication is required.'},
+  {w:'password',ph:'/ˈpæswɜːrd/',m:'n.密码',ex:'Passwords must be changed every 90 days.'},
+  {w:'backup',ph:'/ˈbækʌp/',m:'n.备份',ex:'Daily backup is automated.'},
+  {w:'disaster recovery',ph:'/dɪˈzæstər rɪˈkʌvəri/',m:'灾难恢复',ex:'Disaster recovery plan is in place.'},
+  {w:'business continuity',ph:'/ˈbɪznəs ˌkɑːntɪˈnuːəti/',m:'业务连续性',ex:'Business continuity plan was tested.'}
+ ]},
+ // Week 12 - Clinical System Terminology
+ {id:'V56',w:11,t:'临床系统',d:'10个系统词',words:[
+  {w:'CTMS',ph:'/ˌsiː tiː em ˈes/',m:'临床试验管理系统',ex:'We use CTMS to manage trials.'},
+  {w:'EDC',ph:'/ˌiː diː ˈsiː/',m:'电子数据采集系统',ex:'Data is entered in the EDC system.'},
+  {w:'eTMF',ph:'/ˌiː tiː em ˈef/',m:'试验主文件系统',ex:'Documents are stored in eTMF.'},
+  {w:'ePRO',ph:'/ˌiː piː ɑːr ˈoʊ/',m:'电子患者报告结局',ex:'Patients use ePRO on their phones.'},
+  {w:'IWRS',ph:'/ˈaɪ dʌbljuː ɑːr ˈes/',m:'随机化与药物供应系统',ex:'IWRS manages drug supply.'},
+  {w:'LIMS',ph:'/lɪmz/',m:'实验室信息管理系统',ex:'Lab results go into LIMS.'},
+  {w:'pharmacovigilance',ph:'/ˌfɑːrməkoʊˈvɪɡɪləns/',m:'n.药物警戒',ex:'The pharmacovigilance system tracks AEs.'},
+  {w:'registry',ph:'/ˈredʒɪstri/',m:'n.登记系统',ex:'Patient data is in the registry.'},
+  {w:'biobank',ph:'/ˈbaɪoʊbæŋk/',m:'n.生物样本库',ex:'Samples are stored in the biobank.'},
+  {w:'eConsent',ph:'/iː kənˈsent/',m:'电子知情同意',ex:'eConsent simplifies the process.'}
+ ]},
+ {id:'V57',w:11,t:'系统功能',d:'10个系统词',words:[
+  {w:'edit check',ph:'/ˈedɪt tʃek/',m:'编辑检查',ex:'An edit check prevents invalid data.'},
+  {w:'validation rule',ph:'/ˌvælɪˈdeɪʃn ruːl/',m:'验证规则',ex:'The validation rule flags missing data.'},
+  {w:'workflow',ph:'/ˈwɜːrkfloʊ/',m:'n.工作流',ex:'The approval workflow is automated.'},
+  {w:'notification',ph:'/ˌnoʊtɪfɪˈkeɪʃn/',m:'n.通知',ex:'You will receive a notification.'},
+  {w:'alert',ph:'/əˈlɜːrt/',m:'n.提醒',ex:'The system sends an alert for overdue queries.'},
+  {w:'dashboard',ph:'/ˈdæʃbɔːrd/',m:'n.仪表板',ex:'The dashboard shows enrollment status.'},
+  {w:'report',ph:'/rɪˈpɔːrt/',m:'n.报表',ex:'Generate a monthly report.'},
+  {w:'export',ph:'/ɪkˈspɔːrt/',m:'v.导出',ex:'You can export data to Excel.'},
+  {w:'import',ph:'/ˈɪmpɔːrt/',m:'v.导入',ex:'Import the user list from CSV.'},
+  {w:'integration',ph:'/ˌɪntɪˈɡreɪʃn/',m:'n.集成',ex:'The EDC-CTMS integration is working.'}
+ ]},
+ {id:'V58',w:11,t:'系统状态',d:'10个系统词',words:[
+  {w:'go-live',ph:'/ɡoʊ laɪv/',m:'上线',ex:'The go-live date is September 1st.'},
+  {w:'deployment',ph:'/dɪˈplɔɪmənt/',m:'n.部署',ex:'The deployment was successful.'},
+  {w:'release',ph:'/rɪˈliːs/',m:'n.发布',ex:'Version 2.0 release is next week.'},
+  {w:'upgrade',ph:'/ˈʌpɡreɪd/',m:'n./v.升级',ex:'We need a system upgrade.'},
+  {w:'patch',ph:'/pætʃ/',m:'n.补丁',ex:'A security patch was applied.'},
+  {w:'downtime',ph:'/ˈdaʊntaɪm/',m:'n.停机时间',ex:'The downtime was 2 hours.'},
+  {w:'uptime',ph:'/ˈʌptaɪm/',m:'n.正常运行时间',ex:'The system has 99.9% uptime.'},
+  {w:'performance',ph:'/pərˈfɔːrməns/',m:'n.性能',ex:'The performance is acceptable.'},
+  {w:'scalability',ph:'/ˌskeɪləˈbɪləti/',m:'n.可扩展性',ex:'The system has good scalability.'},
+  {w:'availability',ph:/əˌveɪləˈbɪləti/||'/əˌveɪləˈbɪləti/',m:'n.可用性',ex:'System availability is 24/7.'}
+ ]},
+ {id:'V59',w:11,t:'用户管理',d:'10个系统词',words:[
+  {w:'user',ph:'/ˈjuːzər/',m:'n.用户',ex:'All users must be trained.'},
+  {w:'role',ph:'/roʊl/',m:'n.角色',ex:'Each role has different permissions.'},
+  {w:'permission',ph:'/pərˈmɪʃn/',m:'n.权限',ex:'You do not have permission.'},
+  {w:'privilege',ph:'/ˈprɪvəlɪdʒ/',m:'n.特权',ex:'Admin privileges are required.'},
+  {w:'profile',ph:'/ˈproʊfaɪl/',m:'n.配置文件',ex:'Update your user profile.'},
+  {w:'account',ph:'/əˈkaʊnt/',m:'n.账户',ex:'Your account is locked.'},
+  {w:'login',ph:'/ˈlɔːɡɪn/',m:'n./v.登录',ex:'Login with your credentials.'},
+  {w:'logout',ph:'/ˈlɔːɡaʊt/',m:'n./v.登出',ex:'Please logout when done.'},
+  {w:'register',ph:'/ˈredʒɪstər/',m:'v.注册',ex:'New users must register first.'},
+  {w:'onboard',ph:'/ˈɑːnbɔːrd/',m:'v.入职引导',ex:'The onboarding process takes 2 days.'}
+ ]},
+ {id:'V60',w:11,t:'总复习',d:'10个综合词',words:[
+  {w:'quality',ph:'/ˈkwɑːləti/',m:'n.质量',ex:'Quality is everyone\'s responsibility.'},
+  {w:'risk-based',ph:'/rɪsk beɪst/',m:'基于风险的',ex:'We use a risk-based approach.'},
+  {w:'lifecycle',ph:'/ˈlaɪfsaɪkl/',m:'n.生命周期',ex:'System lifecycle management is important.'},
+  {w:'continuous improvement',ph:'/kənˈtɪnuəs ɪmˈpruːvmənt/',m:'持续改进',ex:'We believe in continuous improvement.'},
+  {w:'best practice',ph:'/best ˈpræktɪs/',m:'最佳实践',ex:'We follow industry best practices.'},
+  {w:'gap analysis',ph:'/ɡæp əˈnæləsɪs/',m:'差距分析',ex:'We conducted a gap analysis.'},
+  {w:'remediation',ph:'/rɪˌmiːdiˈeɪʃn/',m:'n.整改',ex:'Remediation plan was submitted.'},
+  {w:'validation strategy',ph:'/ˌvælɪˈdeɪʃn ˈstrætədʒi/',m:'验证策略',ex:'The validation strategy is risk-based.'},
+  {w:'system retirement',ph:'/ˈsɪstəm rɪˈtaɪərmənt/',m:'系统退役',ex:'System retirement requires planning.'},
+  {w:'cloud',ph:'/klaʊd/',m:'n.云',ex:'The system is cloud-based.'}
+ ]}
+];
+
+// ============ STATE ============
+let state = {
+ speakingDone:{},
+ vocabDone:{},
+ vocabKnown:{},
+ checkins:{},
+ streak:0,
+ lastCheckin:null,
+ totalMinutes:0,
+ currentSpeakingWeek:0,
+ currentVocabWeek:0,
+ flashcardIndex:0,
+ timerSeconds:0,
+ timerRunning:false,
+ timerType:null,
+ timerInterval:null,
+ currentLessonId:null
+};
+
+function loadState(){
+ try{const s=localStorage.getItem('be-study-state');if(s){state=Object.assign(state,JSON.parse(s))}}catch(e){}
+}
+function saveState(){
+ try{localStorage.setItem('be-study-state',JSON.stringify(state))}catch(e){}
+}
+function getToday(){return new Date().toISOString().slice(0,10)}
+function getDayNum(){const d=new Date();return d.getDay()===0?7:d.getDay()}
+
+// ============ TAB SWITCHING ============
+function switchTab(name){
+ document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+ document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+ document.getElementById('page-'+name).classList.add('active');
+ document.querySelector('.tab[onclick*="'+name+'"]').classList.add('active');
+ if(name==='today')renderToday();
+ if(name==='speaking')renderSpeaking();
+ if(name==='vocab')renderVocab();
+ if(name==='stats')renderStats();
+ if(name==='my')renderMy();
+ window.scrollTo(0,0);
+}
+
+// ============ TOAST ============
+function toast(msg){
+ const t=document.getElementById('toast');
+ t.textContent=msg;t.classList.add('show');
+ setTimeout(()=>t.classList.remove('show'),2000);
+}
+
+// ============ TTS ============
+function speak(text,rate){
+ if(!window.speechSynthesis){toast('浏览器不支持语音');return}
+ speechSynthesis.cancel();
+ const u=new SpeechSynthesisUtterance(text);
+ u.lang='en-US';
+ u.rate=rate||0.8;
+ speechSynthesis.speak(u);
+}
+
+// ============ TODAY PAGE ============
+function renderToday(){
+ const today=getToday();
+ const dateStr=new Date().toLocaleDateString('zh-CN',{year:'numeric',month:'long',day:'numeric',weekday:'long'});
+ document.getElementById('todayDate').textContent=dateStr;
+ document.getElementById('streakBadge').textContent='🔥 '+state.streak+'天';
+ 
+ // Find today's lessons
+ const speakLessonIdx=Object.keys(state.speakingDone).filter(k=>state.speakingDone[k]).length;
+ const vocabLessonIdx=Object.keys(state.vocabDone).filter(k=>state.vocabDone[k]).length;
+ const speakLesson=SPEAKING_LESSONS[speakLessonIdx]||SPEAKING_LESSONS[SPEAKING_LESSONS.length-1];
+ const vocabLesson=VOCAB_LESSONS[vocabLessonIdx]||VOCAB_LESSONS[VOCAB_LESSONS.length-1];
+ 
+ // Checkin area
+ const checkedIn=state.checkins[today];
+ const ca=document.getElementById('checkinArea');
+ if(checkedIn){
+  ca.innerHTML='<div class="card"><div class="checkin-box"><div class="checkin-circle">✓</div><h3>今日已打卡！</h3><p class="muted">坚持就是胜利，继续保持 💪</p></div></div>';
+ }else{
+  ca.innerHTML='<div class="card"><div class="checkin-box"><div style="width:80px;height:80px;border-radius:50%;border:3px dashed var(--pri);display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 16px;color:var(--pri)">○</div><h3>今日尚未打卡</h3><p class="muted">完成口语和词汇任务后点击打卡</p></div></div>';
+ }
+ 
+ // Speaking content
+ const speakDone=state.speakingDone[speakLesson.id];
+ document.getElementById('todaySpeakingContent').innerHTML=`
+  <div class="lesson-item ${speakDone?'done':''}" onclick="openSpeakingLesson('${speakLesson.id}')">
+   <div class="lesson-num">${speakLessonIdx+1}</div>
+   <div class="lesson-info"><div class="t">${speakLesson.t}</div><div class="d">${speakLesson.d} · ${SPEAKING_WEEKS[speakLesson.w].n}</div></div>
+   <div class="lesson-status">${speakDone?'✅':'▶️'}</div>
+  </div>
+  <div style="margin-top:12px">
+   <button class="btn btn-primary" onclick="startTimer('speaking',20,'${speakLesson.id}')">⏱️ 开始20分钟口语练习</button>
+  </div>`;
+ 
+ // Vocab content
+ const vocabDone=state.vocabDone[vocabLesson.id];
+ document.getElementById('todayVocabContent').innerHTML=`
+  <div class="lesson-item ${vocabDone?'done':''}" onclick="openVocabLesson('${vocabLesson.id}')">
+   <div class="lesson-num" style="background:var(--acc-l);color:var(--acc-d)">${vocabLessonIdx+1}</div>
+   <div class="lesson-info"><div class="t">${vocabLesson.t}</div><div class="d">${vocabLesson.d} · ${VOCAB_WEEKS[vocabLesson.w].n} · ${vocabLesson.words.length}个单词</div></div>
+   <div class="lesson-status">${vocabDone?'✅':'▶️'}</div>
+  </div>
+  <div style="margin-top:12px">
+   <button class="btn btn-amber" onclick="startTimer('vocab',15,'${vocabLesson.id}')">⏱️ 开始15分钟词汇学习</button>
+  </div>`;
+ 
+ // Progress
+ const speakTotal=Object.keys(state.speakingDone).filter(k=>state.speakingDone[k]).length;
+ const vocabTotal=Object.keys(state.vocabDone).filter(k=>state.vocabDone[k]).length;
+ const speakPct=Math.round(speakTotal/60*100);
+ const vocabPct=Math.round(vocabTotal/60*100);
+ document.getElementById('todayProgress').innerHTML=`
+  <div style="margin-bottom:12px">
+   <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>🎤 口语进度</span><span>${speakTotal}/60课</span></div>
+   <div class="pbar"><div class="pbar-fill" style="width:${speakPct}%"></div></div>
+  </div>
+  <div style="margin-bottom:12px">
+   <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>📚 词汇进度</span><span>${vocabTotal}/60课</span></div>
+   <div class="pbar"><div class="pbar-fill" style="width:${vocabPct}%;background:linear-gradient(90deg,var(--acc),var(--acc-d))"></div></div>
+  </div>
+  ${!checkedIn&&speakDone&&vocabDone?'<button class="btn btn-grn" onclick="checkin()" style="margin-top:8px">✅ 今日打卡！</button>':''}
+  ${!checkedIn&&(!speakDone||!vocabDone)?'<p class="muted" style="text-align:center;margin-top:8px">完成今天的口语和词汇任务后即可打卡</p>':''}`;
+}
+
+// ============ TIMER ============
+function startTimer(type,minutes,lessonId){
+ state.timerType=type;
+ state.currentLessonId=lessonId;
+ state.timerSeconds=minutes*60;
+ state.timerRunning=true;
+ saveState();
+ showTimerModal();
+}
+function showTimerModal(){
+ const m=state.timerSeconds;
+ const mm=String(Math.floor(m/60)).padStart(2,'0');
+ const ss=String(m%60).padStart(2,'0');
+ const typeLabel=state.timerType==='speaking'?'🎤 口语练习':'📚 词汇学习';
+ const lesson=state.timerType==='speaking'?SPEAKING_LESSONS.find(l=>l.id===state.currentLessonId):VOCAB_LESSONS.find(l=>l.id===state.currentLessonId);
+ const lessonTitle=lesson?lesson.t:'';
+ document.getElementById('modalBody').innerHTML=`
+  <div class="modal-title">${typeLabel}</div>
+  <p class="muted" style="text-align:center;margin-bottom:16px">${lessonTitle}</p>
+  <div class="timer-card">
+   <div class="timer-label">剩余时间</div>
+   <div class="timer-display" id="timerDisplay">${mm}:${ss}</div>
+   <div class="timer-btns">
+    <button class="timer-btn ${state.timerRunning?'':'active'}" onclick="toggleTimer()">${state.timerRunning?'⏸ 暂停':'▶ 继续'}</button>
+    <button class="timer-btn" onclick="skipTimer()">⏭ 完成</button>
+    <button class="timer-btn" onclick="stopTimer()">✖ 取消</button>
+   </div>
+  </div>
+  <div id="timerPhrases" style="margin-top:16px"></div>`;
+ document.getElementById('modalOverlay').classList.add('show');
+ if(state.timerRunning&&!state.timerInterval){
+  state.timerInterval=setInterval(()=>{
+   if(state.timerSeconds>0){
+    state.timerSeconds--;
+    updateTimerDisplay();
+   }else{
+    finishTimer();
+   }
+  },1000);
+ }
+ // Show phrases/words for reference
+ if(state.timerType==='speaking'&&lesson){
+  document.getElementById('timerPhrases').innerHTML='<div class="sec-title"><span class="dot"></span>今日短语</div>'+lesson.ph.map(p=>`
+   <div class="phrase-card">
+    <div class="phrase-en">${p.en}</div>
+    <div class="phrase-cn">${p.cn}</div>
+    <div class="phrase-actions"><button class="mini-btn speak" onclick="speak('${p.en.replace(/'/g,"\\'")}')">🔊 朗读</button></div>
+   </div>`).join('');
+ }else if(state.timerType==='vocab'&&lesson){
+  document.getElementById('timerPhrases').innerHTML='<div class="sec-title"><span class="dot" style="background:var(--acc)"></span>今日单词</div>'+lesson.words.map(w=>`
+   <div class="vocab-item">
+    <div class="vocab-word">${w.w}<span class="ph">${w.ph}</span></div>
+    <div class="vocab-meaning">${w.m}</div>
+    <div style="cursor:pointer" onclick="speak('${w.w}')">🔊</div>
+   </div>`).join('');
+ }
+}
+function updateTimerDisplay(){
+ const m=state.timerSeconds;
+ const mm=String(Math.floor(m/60)).padStart(2,'0');
+ const ss=String(m%60).padStart(2,'0');
+ const el=document.getElementById('timerDisplay');
+ if(el)el.textContent=mm+':'+ss;
+}
+function toggleTimer(){
+ state.timerRunning=!state.timerRunning;
+ saveState();
+ if(state.timerRunning){
+  state.timerInterval=setInterval(()=>{
+   if(state.timerSeconds>0){state.timerSeconds--;updateTimerDisplay()}else{finishTimer()}
+  },1000);
+ }else{
+  clearInterval(state.timerInterval);state.timerInterval=null;
+ }
+ showTimerModal();
+}
+function stopTimer(){
+ clearInterval(state.timerInterval);state.timerInterval=null;
+ state.timerRunning=false;
+ state.timerSeconds=0;
+ saveState();
+ closeModal();
+}
+function finishTimer(){
+ clearInterval(state.timerInterval);state.timerInterval=null;
+ state.timerRunning=false;
+ const minutes=state.timerType==='speaking'?20:15;
+ state.totalMinutes+=minutes;
+ // Mark lesson done
+ if(state.timerType==='speaking'){
+  state.speakingDone[state.currentLessonId]=true;
+ }else{
+  state.vocabDone[state.currentLessonId]=true;
+ }
+ state.timerSeconds=0;
+ saveState();
+ closeModal();
+ confetti();
+ toast(state.timerType==='speaking'?'🎤 口语练习完成！+20分钟':'📚 词汇学习完成！+15分钟');
+ setTimeout(()=>{switchTab('today')},500);
+}
+
+// ============ CHECKIN ============
+function checkin(){
+ const today=getToday();
+ state.checkins[today]={date:today,speaking:true,vocab:true};
+ // Update streak
+ if(state.lastCheckin){
+  const last=new Date(state.lastCheckin);
+  const today2=new Date(today);
+  const diff=Math.round((today2-last)/(1000*60*60*24));
+  if(diff===1)state.streak++;
+  else if(diff>1)state.streak=1;
+ }else{
+  state.streak=1;
+ }
+ state.lastCheckin=today;
+ saveState();
+ confetti();
+ toast('🎉 打卡成功！连续'+state.streak+'天！');
+ setTimeout(()=>renderToday(),500);
+}
+
+// ============ SPEAKING PAGE ============
+function renderSpeaking(){
+ const wt=document.getElementById('speakingWeekTabs');
+ const unlockedWeek=Math.floor(Object.keys(state.speakingDone).filter(k=>state.speakingDone[k]).length/5);
+ wt.innerHTML=SPEAKING_WEEKS.map((w,i)=>{
+  const locked=i>unlockedWeek;
+  return '<div class="week-tab '+ (i===state.currentSpeakingWeek?'active':'')+' '+ (locked?'locked':'')+'" onclick="'+ (locked?'toast(\'先完成前面的课程解锁\')':'selectSpeakingWeek('+i+')')+'">'+w.n+'</div>';
+ }).join('');
+ renderSpeakingLessons();
+}
+function selectSpeakingWeek(idx){state.currentSpeakingWeek=idx;renderSpeaking()}
+function renderSpeakingLessons(){
+ const weekLessons=SPEAKING_LESSONS.filter(l=>l.w===state.currentSpeakingWeek);
+ const w=SPEAKING_WEEKS[state.currentSpeakingWeek];
+ const phaseClass='phase-'+w.p;
+ const doneCount=weekLessons.filter(l=>state.speakingDone[l.id]).length;
+ document.getElementById('speakingLessons').innerHTML=`
+  <div class="card">
+   <span class="phase-tag ${phaseClass}">阶段${w.p}</span>
+   <h2 style="font-size:16px">${w.n}：${w.t}</h2>
+   <p class="muted">本周进度：${doneCount}/${weekLessons.length}课</p>
+   <div class="pbar" style="margin-top:8px"><div class="pbar-fill" style="width:${doneCount/weekLessons.length*100}%"></div></div>
+  </div>
+  ${weekLessons.map((l,i)=>{
+   const done=state.speakingDone[l.id];
+   const allPrevDone=i===0||state.speakingDone[weekLessons[i-1].id];
+   const prevWeekDone=state.currentSpeakingWeek===0||Object.keys(state.speakingDone).filter(k=>state.speakingDone[k]).length>=state.currentSpeakingWeek*5;
+   const locked=!prevWeekDone&&!allPrevDone;
+   return '<div class="lesson-item '+ (done?'done':'')+' '+ (locked?'locked':'')+'" onclick="'+ (locked?'toast(\'先完成前面的课程\')':'openSpeakingLesson(\''+l.id+'\')')+'"><div class="lesson-num">'+(state.currentSpeakingWeek*5+i+1)+'</div><div class="lesson-info"><div class="t">'+l.t+'</div><div class="d">'+l.d+' · '+l.ph.length+'个短语</div></div><div class="lesson-status">'+(done?'✅':locked?'🔒':'▶️')+'</div></div>';
+  }).join('')}`;
+}
+function openSpeakingLesson(id){
+ const l=SPEAKING_LESSONS.find(x=>x.id===id);
+ if(!l)return;
+ const w=SPEAKING_WEEKS[l.w];
+ const done=state.speakingDone[id];
+ const vidUrl='https://search.bilibili.com/all?keyword='+encodeURIComponent(l.vid);
+ document.getElementById('modalBody').innerHTML=`
+  <div class="modal-title">🎤 ${l.t}</div>
+  <p class="muted" style="text-align:center;margin-bottom:8px">${w.n} · ${l.d}</p>
+  <span class="phase-tag phase-${w.p}" style="display:block;text-align:center;margin-bottom:16px">阶段${w.p}</span>
+  <div class="sec-title"><span class="dot"></span>核心短语</div>
+  ${l.ph.map(p=>`
+   <div class="phrase-card">
+    <div class="phrase-en">${p.en}</div>
+    <div class="phrase-cn">${p.cn}</div>
+    <div class="phrase-actions">
+     <button class="mini-btn speak" onclick="speak('${p.en.replace(/'/g,"\\'")}',0.8)">🔊 常速</button>
+     <button class="mini-btn speak" onclick="speak('${p.en.replace(/'/g,"\\'")}',0.5)">🐢 慢速</button>
+    </div>
+   </div>`).join('')}
+  <div style="margin:16px 0">
+   <a href="${vidUrl}" target="_blank" style="text-decoration:none"><button class="btn btn-amber">📺 观看视频讲解</button></a>
+  </div>
+  <button class="btn ${done?'btn-outline':'btn-primary'}" onclick="toggleSpeakingDone('${id}')">${done?'↩ 取消完成':'✅ 标记完成'}</button>
+  <button class="btn btn-outline" onclick="startTimer('speaking',20,'${id}')" style="margin-top:8px">⏱️ 开始20分钟练习</button>`;
+ document.getElementById('modalOverlay').classList.add('show');
+}
+function toggleSpeakingDone(id){
+ state.speakingDone[id]=!state.speakingDone[id];
+ saveState();
+ toast(state.speakingDone[id]?'✅ 已标记完成':'已取消完成');
+ closeModal();
+ renderSpeaking();
+}
+
+// ============ VOCAB PAGE ============
+function renderVocab(){
+ const wt=document.getElementById('vocabWeekTabs');
+ const unlockedWeek=Math.floor(Object.keys(state.vocabDone).filter(k=>state.vocabDone[k]).length/5);
+ wt.innerHTML=VOCAB_WEEKS.map((w,i)=>{
+  const locked=i>unlockedWeek;
+  return '<div class="week-tab '+ (i===state.currentVocabWeek?'active':'')+' '+ (locked?'locked':'')+'" onclick="'+ (locked?'toast(\'先完成前面的课程解锁\')':'selectVocabWeek('+i+')')+'">'+w.n+'</div>';
+ }).join('');
+ renderVocabLessons();
+}
+function selectVocabWeek(idx){state.currentVocabWeek=idx;renderVocab()}
+function renderVocabLessons(){
+ const weekLessons=VOCAB_LESSONS.filter(l=>l.w===state.currentVocabWeek);
+ const w=VOCAB_WEEKS[state.currentVocabWeek];
+ const phaseClass='phase-'+w.p;
+ const doneCount=weekLessons.filter(l=>state.vocabDone[l.id]).length;
+ document.getElementById('vocabLessons').innerHTML=`
+  <div class="card">
+   <span class="phase-tag ${phaseClass}">阶段${w.p}</span>
+   <h2 style="font-size:16px">${w.n}：${w.t}</h2>
+   <p class="muted">本周进度：${doneCount}/${weekLessons.length}课</p>
+   <div class="pbar" style="margin-top:8px"><div class="pbar-fill" style="width:${doneCount/weekLessons.length*100}%;background:linear-gradient(90deg,var(--acc),var(--acc-d))"></div></div>
+  </div>
+  ${weekLessons.map((l,i)=>{
+   const done=state.vocabDone[l.id];
+   const knownCount=l.words.filter(wd=>state.vocabKnown[wd.w]).length;
+   const allPrevDone=i===0||state.vocabDone[weekLessons[i-1].id];
+   const prevWeekDone=state.currentVocabWeek===0||Object.keys(state.vocabDone).filter(k=>state.vocabDone[k]).length>=state.currentVocabWeek*5;
+   const locked=!prevWeekDone&&!allPrevDone;
+   return '<div class="lesson-item '+ (done?'done':'')+' '+ (locked?'locked':'')+'" onclick="'+ (locked?'toast(\'先完成前面的课程\')':'openVocabLesson(\''+l.id+'\')')+'"><div class="lesson-num" style="background:var(--acc-l);color:var(--acc-d)">'+(state.currentVocabWeek*5+i+1)+'</div><div class="lesson-info"><div class="t">'+l.t+'</div><div class="d">'+l.d+' · 已掌握'+knownCount+'/'+l.words.length+'</div></div><div class="lesson-status">'+(done?'✅':locked?'🔒':'▶️')+'</div></div>';
+  }).join('')}`;
+}
+function openVocabLesson(id){
+ const l=VOCAB_LESSONS.find(x=>x.id===id);
+ if(!l)return;
+ const w=VOCAB_WEEKS[l.w];
+ const done=state.vocabDone[id];
+ state.flashcardIndex=0;
+ renderVocabModal(l,w,done);
+}
+function renderVocabModal(l,w,done){
+ const idx=state.flashcardIndex;
+ const word=l.words[idx];
+ const isKnown=state.vocabKnown[word.w];
+ const vidUrl='https://search.bilibili.com/all?keyword='+encodeURIComponent('英语词汇 '+word.w+' 发音教学');
+ document.getElementById('modalBody').innerHTML=`
+  <div class="modal-title">📚 ${l.t}</div>
+  <p class="muted" style="text-align:center;margin-bottom:8px">${w.n} · ${idx+1}/${l.words.length}</p>
+  <div class="flashcard-container">
+   <div class="flashcard" id="flashcard" onclick="flipCard()">
+    <div class="flashcard-face flashcard-front">
+     <div class="flashcard-word">${word.w}</div>
+     <div class="flashcard-phonetic">${word.ph}</div>
+     <div class="flashcard-hint">点击翻面</div>
+    </div>
+    <div class="flashcard-face flashcard-back">
+     <div class="flashcard-meaning">${word.m}</div>
+     <div class="flashcard-example">${word.ex}</div>
+     <div class="flashcard-hint">点击翻面</div>
+    </div>
+   </div>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:16px">
+   <button class="mini-btn speak" onclick="event.stopPropagation();speak('${word.w}',0.8)" style="flex:1;padding:10px">🔊 朗读</button>
+   <button class="mini-btn speak" onclick="event.stopPropagation();speak('${word.w}',0.5)" style="flex:1;padding:10px">🐢 慢速</button>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:16px">
+   <button class="btn btn-outline" onclick="prevCard(${l.words.length})" style="flex:1">⬅ 上一个</button>
+   <button class="btn btn-primary" onclick="nextCard(${l.words.length})" style="flex:1">下一个 ➡</button>
+  </div>
+  <div style="display:flex;gap:8px;margin-bottom:16px">
+   <button class="btn ${isKnown?'btn-grn':'btn-outline'}" onclick="toggleKnown('${word.w}')" style="flex:1">${isKnown?'✅ 已掌握':'标记掌握'}</button>
+  </div>
+  <a href="${vidUrl}" target="_blank" style="text-decoration:none"><button class="btn btn-amber" style="width:100%;margin-bottom:8px">📺 观看词汇视频</button></a>
+  <button class="btn ${done?'btn-outline':'btn-primary'}" onclick="toggleVocabDone('${l.id}')">${done?'↩ 取消完成':'✅ 标记本课完成'}</button>
+  <button class="btn btn-outline" onclick="startTimer('vocab',15,'${l.id}')" style="margin-top:8px">⏱️ 开始15分钟学习</button>`;
+ document.getElementById('modalOverlay').classList.add('show');
+}
+function flipCard(){
+ const c=document.getElementById('flashcard');
+ if(c)c.classList.toggle('flipped');
+}
+function nextCard(total){
+ state.flashcardIndex=(state.flashcardIndex+1)%total;
+ saveState();
+ const l=VOCAB_LESSONS.find(x=>x.id===state.currentLessonId)||VOCAB_LESSONS.filter(x=>x.w===state.currentVocabWeek)[0];
+ // Find current lesson from modal
+ const modalTitle=document.querySelector('.modal-title');
+ if(modalTitle){
+  const titleText=modalTitle.textContent.replace('📚 ','');
+  const lesson=VOCAB_LESSONS.find(x=>x.t===titleText);
+  if(lesson){
+   const w=VOCAB_WEEKS[lesson.w];
+   const done=state.vocabDone[lesson.id];
+   renderVocabModal(lesson,w,done);
+   return;
+  }
+ }
+}
+function prevCard(total){
+ state.flashcardIndex=(state.flashcardIndex-1+total)%total;
+ saveState();
+ const modalTitle=document.querySelector('.modal-title');
+ if(modalTitle){
+  const titleText=modalTitle.textContent.replace('📚 ','');
+  const lesson=VOCAB_LESSONS.find(x=>x.t===titleText);
+  if(lesson){
+   const w=VOCAB_WEEKS[lesson.w];
+   const done=state.vocabDone[lesson.id];
+   renderVocabModal(lesson,w,done);
+   return;
+  }
+ }
+}
+function toggleKnown(word){
+ state.vocabKnown[word]=!state.vocabKnown[word];
+ saveState();
+ toast(state.vocabKnown[word]?'✅ 已标记掌握':'已取消掌握');
+ const modalTitle=document.querySelector('.modal-title');
+ if(modalTitle){
+  const titleText=modalTitle.textContent.replace('📚 ','');
+  const lesson=VOCAB_LESSONS.find(x=>x.t===titleText);
+  if(lesson){
+   const w=VOCAB_WEEKS[lesson.w];
+   const done=state.vocabDone[lesson.id];
+   renderVocabModal(lesson,w,done);
+   return;
+  }
+ }
+}
+function toggleVocabDone(id){
+ state.vocabDone[id]=!state.vocabDone[id];
+ saveState();
+ toast(state.vocabDone[id]?'✅ 已标记完成':'已取消完成');
+ closeModal();
+ renderVocab();
+}
+
+// ============ STATS PAGE ============
+let chart7,chartP,chartT;
+function renderStats(){
+ const days=Object.keys(state.checkins).length;
+ const speakLessons=Object.keys(state.speakingDone).filter(k=>state.speakingDone[k]).length;
+ const vocabLessons=Object.keys(state.vocabDone).filter(k=>state.vocabDone[k]).length;
+ const words=Object.keys(state.vocabKnown).filter(k=>state.vocabKnown[k]).length;
+ const minutes=state.totalMinutes;
+ document.getElementById('statDays').textContent=days;
+ document.getElementById('statLessons').textContent=speakLessons+vocabLessons;
+ document.getElementById('statWords').textContent=words;
+ document.getElementById('statMinutes').textContent=minutes;
+ 
+ // 7-day chart
+ const labels=[];const data=[];
+ for(let i=6;i>=0;i--){
+  const d=new Date();d.setDate(d.getDate()-i);
+  const ds=d.toISOString().slice(0,10);
+  labels.push(d.toLocaleDateString('zh-CN',{month:'numeric',day:'numeric'}));
+  data.push(state.checkins[ds]?1:0);
+ }
+ if(chart7)chart7.destroy();
+ chart7=new Chart(document.getElementById('chart7days'),{
+  type:'bar',
+  data:{labels:labels,datasets:[{label:'打卡',data:data,backgroundColor:data.map(v=>v?'#0F766E':'#E2E8F0'),borderRadius:6,maxBarThickness:30}]},
+  options:{plugins:{legend:{display:false}},scales:{y:{display:false,beginAtZero:true,max:1.2}},aspectRatio:3}
+ });
+ 
+ // Progress chart
+ if(chartP)chartP.destroy();
+ chartP=new Chart(document.getElementById('chartProgress'),{
+  type:'doughnut',
+  data:{labels:['口语完成','口语剩余','词汇完成','词汇剩余'],datasets:[{data:[speakLessons,60-speakLessons,vocabLessons,60-vocabLessons],backgroundColor:['#0F766E','#E2E8F0','#F59E0B','#FEF3C7'],borderWidth:0}]},
+  options:{plugins:{legend:{position:'bottom',labels:{padding:12,font:{size:11}}}}}
+ });
+ 
+ // Type chart
+ if(chartT)chartT.destroy();
+ const speakMin=Object.keys(state.speakingDone).filter(k=>state.speakingDone[k]).length*20;
+ const vocabMin=Object.keys(state.vocabDone).filter(k=>state.vocabDone[k]).length*15;
+ chartT=new Chart(document.getElementById('chartType'),{
+  type:'doughnut',
+  data:{labels:['口语时长','词汇时长'],datasets:[{data:[speakMin,vocabMin],backgroundColor:['#0F766E','#F59E0B'],borderWidth:0}]},
+  options:{plugins:{legend:{position:'bottom',labels:{padding:12,font:{size:11}}}}}
+ });
+}
+
+// ============ MY PAGE ============
+function renderMy(){
+ const speakTotal=Object.keys(state.speakingDone).filter(k=>state.speakingDone[k]).length;
+ const vocabTotal=Object.keys(state.vocabDone).filter(k=>state.vocabDone[k]).length;
+ const words=Object.keys(state.vocabKnown).filter(k=>state.vocabKnown[k]).length;
+ const days=Object.keys(state.checkins).length;
+ document.getElementById('goalDisplay').innerHTML=`
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+   <div style="text-align:center;padding:12px;background:var(--slate-l);border-radius:8px">
+    <div style="font-size:24px;font-weight:800;color:var(--pri)">${days}</div>
+    <div style="font-size:11px;color:var(--slate)">打卡天数</div>
+   </div>
+   <div style="text-align:center;padding:12px;background:var(--slate-l);border-radius:8px">
+    <div style="font-size:24px;font-weight:800;color:var(--acc-d)">${words}</div>
+    <div style="font-size:11px;color:var(--slate)">掌握词汇</div>
+   </div>
+   <div style="text-align:center;padding:12px;background:var(--slate-l);border-radius:8px">
+    <div style="font-size:24px;font-weight:800;color:var(--pri)">${speakTotal}/60</div>
+    <div style="font-size:11px;color:var(--slate)">口语课程</div>
+   </div>
+   <div style="text-align:center;padding:12px;background:var(--slate-l);border-radius:8px">
+    <div style="font-size:24px;font-weight:800;color:var(--acc-d)">${vocabTotal}/60</div>
+    <div style="font-size:11px;color:var(--slate)">词汇课程</div>
+   </div>
+  </div>
+  <div style="margin-top:16px;padding:12px;background:linear-gradient(135deg,var(--pri-l),var(--acc-l));border-radius:8px">
+   <div style="font-size:13px;font-weight:600;margin-bottom:4px">📌 学习目标</div>
+   <div style="font-size:12px;color:var(--slate-d)">12周完成60课口语+60课词汇<br>每天20分钟口语+15分钟词汇<br>从零基础到商务+临床系统英语</div>
+  </div>`;
+}
+
+// ============ MODAL ============
+function closeModal(){
+ document.getElementById('modalOverlay').classList.remove('show');
+ if(state.timerInterval){clearInterval(state.timerInterval);state.timerInterval=null}
+}
+
+// ============ DATA EXPORT/IMPORT ============
+function exportData(){
+ const data=JSON.stringify(state);
+ const blob=new Blob([data],{type:'application/json'});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');
+ a.href=url;a.download='english-study-'+getToday()+'.json';
+ a.click();
+ URL.revokeObjectURL(url);
+ toast('📥 数据已导出');
+}
+function importData(event){
+ const file=event.target.files[0];
+ if(!file)return;
+ const reader=new FileReader();
+ reader.onload=function(e){
+  try{
+   const data=JSON.parse(e.target.result);
+   state=Object.assign(state,data);
+   saveState();
+   toast('📤 数据导入成功！');
+   switchTab('today');
+  }catch(err){toast('导入失败：文件格式错误')}
+ };
+ reader.readAsText(file);
+}
+function resetData(){
+ if(!confirm('确定重置所有学习数据吗？此操作不可恢复！'))return;
+ state={speakingDone:{},vocabDone:{},vocabKnown:{},checkins:{},streak:0,lastCheckin:null,totalMinutes:0,currentSpeakingWeek:0,currentVocabWeek:0,flashcardIndex:0,timerSeconds:0,timerRunning:false,timerType:null,timerInterval:null,currentLessonId:null};
+ saveState();
+ toast('已重置所有数据');
+ switchTab('today');
+}
+
+// ============ INSTALL GUIDE ============
+function showInstallGuide(){
+ document.getElementById('modalBody').innerHTML=`
+  <div class="modal-title">📱 添加到手机桌面</div>
+  <div class="card">
+   <h3 style="font-size:15px;margin-bottom:12px">iPhone / iPad</h3>
+   <ol style="padding-left:20px;font-size:13px;line-height:2">
+    <li>用 <b>Safari</b> 打开本页面</li>
+    <li>点击底部 <b>分享按钮 📤</b></li>
+    <li>选择 <b>"添加到主屏幕"</b></li>
+    <li>点击 <b>"添加"</b> 即可</li>
+   </ol>
+   <p style="font-size:12px;color:var(--slate);margin-top:8px">添加后像App一样使用，可离线打开</p>
+  </div>
+  <div class="card">
+   <h3 style="font-size:15px;margin-bottom:12px">Android</h3>
+   <ol style="padding-left:20px;font-size:13px;line-height:2">
+    <li>用 <b>Chrome</b> 打开本页面</li>
+    <li>点击右上角 <b>菜单 ⋮</b></li>
+    <li>选择 <b>"添加到主屏幕"</b></li>
+   </ol>
+  </div>
+  <div class="card">
+   <h3 style="font-size:15px;margin-bottom:12px">Windows 电脑</h3>
+   <ol style="padding-left:20px;font-size:13px;line-height:2">
+    <li>用 <b>Chrome/Edge</b> 打开本页面</li>
+    <li>点击地址栏右侧 <b>安装图标 ⊕</b></li>
+    <li>选择 <b>"安装"</b> 即可</li>
+   </ol>
+   <p style="font-size:12px;color:var(--slate);margin-top:8px">安装后可在开始菜单/桌面找到</p>
+  </div>
+  <div class="card" style="background:var(--pri-l)">
+   <h3 style="font-size:14px;margin-bottom:8px">💡 数据同步方法</h3>
+   <p style="font-size:12px;color:var(--slate-d)">在旧设备点击"导出数据"保存JSON文件 → 在新设备点击"导入数据"上传该文件即可同步进度</p>
+  </div>`;
+ document.getElementById('modalOverlay').classList.add('show');
+}
+
+// ============ CONFETTI ============
+function confetti(){
+ const colors=['#0F766E','#F59E0B','#22C55E','#6366F1','#EF4444','#EC4899'];
+ for(let i=0;i<40;i++){
+  const c=document.createElement('div');
+  c.className='confetti';
+  c.style.left=Math.random()*100+'%';
+  c.style.top='-10px';
+  c.style.background=colors[Math.floor(Math.random()*colors.length)];
+  c.style.borderRadius=Math.random()>0.5?'50%':'0';
+  c.style.animationDelay=Math.random()*0.5+'s';
+  c.style.animationDuration=(2+Math.random()*2)+'s';
+  document.body.appendChild(c);
+  setTimeout(()=>c.remove(),4000);
+ }
+}
+
+// ============ SERVICE WORKER ============
+if('serviceWorker' in navigator){
+ navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+// ============ INIT ============
+loadState();
+renderToday();
+</script>
+</body>
+</html>
