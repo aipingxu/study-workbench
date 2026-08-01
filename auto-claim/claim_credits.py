@@ -109,7 +109,8 @@ def claim_gift(page):
 def wait_for_login(page, timeout=LOGIN_TIMEOUT):
     """
     自动等待用户登录成功。
-    每3秒检查一次API状态，返回200表示已登录。
+    每3秒用 fetch 检查API状态，返回200表示已登录。
+    注意：不跳转页面，避免打断用户登录操作。
     """
     logger.info("=" * 50)
     logger.info("等待登录中...")
@@ -126,11 +127,7 @@ def wait_for_login(page, timeout=LOGIN_TIMEOUT):
         elapsed = int(time.time() - start)
 
         try:
-            # 先访问 profile 页面，触发登录状态检查
-            page.goto(PROFILE_URL, wait_until="domcontentloaded", timeout=10000)
-            page.wait_for_timeout(1000)
-
-            # 检查API状态
+            # 只用 fetch 检查API状态，不跳转页面
             status, data, error = check_gift_status(page)
 
             if status == 200:
@@ -269,14 +266,17 @@ def run_claim(headed=False):
             if status == 200:
                 logger.info("✅ 已处于登录状态，无需重新登录")
             else:
-                logger.info(f"当前未登录（status={status}），开始等待登录...")
-                # 尝试导航到 profile 页面，触发登录跳转
-                try:
-                    page.goto(PROFILE_URL, wait_until="domcontentloaded", timeout=15000)
-                except Exception:
-                    pass
+                logger.info(f"当前未登录（status={status}）")
+                logger.info("")
+                logger.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+                logger.info(">> 请在弹出的浏览器窗口中手动登录 codebuddy.cn")
+                logger.info(">> 1. 点击页面上的「登录」按钮")
+                logger.info(">> 2. 输入账号密码 / 微信扫码 / GitHub登录")
+                logger.info(">> 3. 登录成功后脚本会自动继续，无需手动操作")
+                logger.info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+                logger.info("")
 
-                # 自动等待登录
+                # 自动等待登录（只轮询API，不跳转页面）
                 if not wait_for_login(page):
                     logger.error("登录失败，退出")
                     context.close()
