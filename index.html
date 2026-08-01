@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="每日打卡">
+<meta name="theme-color" content="#6366F1">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<title>每日打卡工作台</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+:root{
+--pri:#6366F1;--pri-l:#EEF2FF;--pri-d:#4F46E5;
+--acc:#F59E0B;--acc-l:#FEF3C7;--acc-d:#D97706;
+--grn:#10B981;--grn-l:#D1FAE5;
+--red:#EF4444;--red-l:#FEE2E2;
+--bg:#F8FAFC;--card:#FFFFFF;
+--t1:#1E293B;--t2:#64748B;--t3:#94A3B8;
+--bd:#E2E8F0;--r:16px;--rs:10px;
+--safe-b:env(safe-area-inset-bottom,0px)
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;background:var(--bg);color:var(--t1);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+#app{max-width:480px;margin:0 auto;min-height:100vh;padding-bottom:calc(72px + var(--safe-b));position:relative}
+
+/* Top bar */
+.topbar{background:linear-gradient(135deg,#6366F1,#818CF8);color:#fff;padding:20px 20px 16px;position:sticky;top:0;z-index:50}
+.topbar .greet{font-size:13px;opacity:.85;margin-bottom:2px}
+.topbar .date{font-size:22px;font-weight:700;letter-spacing:-.5px}
+.topbar .sub{font-size:12px;opacity:.7;margin-top:2px}
+
+/* Progress ring */
+.ring-wrap{display:flex;align-items:center;justify-content:center;margin:16px 0 4px}
+.ring{position:relative;width:100px;height:100px}
+.ring svg{transform:rotate(-90deg)}
+.ring .ring-bg{fill:none;stroke:rgba(255,255,255,.2);stroke-width:8}
+.ring .ring-fg{fill:none;stroke:#fff;stroke-width:8;stroke-linecap:round;transition:stroke-dashoffset .6s ease}
+.ring .ring-txt{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;color:#fff}
+.ring .ring-txt .num{font-size:26px;font-weight:700}
+.ring .ring-txt .lbl{font-size:10px;opacity:.8}
+
+/* Subject cards on home */
+.subj-grid{padding:16px 16px 8px}
+.subj-card{background:var(--card);border-radius:var(--r);padding:16px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.03);display:flex;align-items:center;gap:14px;transition:transform .15s;cursor:pointer}
+.subj-card:active{transform:scale(.97)}
+.subj-icon{width:48px;height:48px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0}
+.subj-icon.cn{background:var(--pri-l);color:var(--pri)}
+.subj-icon.ma{background:var(--acc-l);color:var(--acc-d)}
+.subj-icon.en{background:var(--grn-l);color:var(--grn)}
+.subj-info{flex:1;min-width:0}
+.subj-info .name{font-size:15px;font-weight:600;margin-bottom:2px}
+.subj-info .desc{font-size:12px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.subj-bar{height:4px;background:var(--bd);border-radius:2px;margin-top:6px;overflow:hidden}
+.subj-bar-fill{height:100%;border-radius:2px;transition:width .5s}
+.subj-arrow{color:var(--t3);font-size:18px;flex-shrink:0}
+
+/* Today tasks */
+.section-title{font-size:16px;font-weight:600;padding:8px 20px 8px;color:var(--t1)}
+.task-card{background:var(--card);border-radius:var(--r);margin:0 16px 10px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.task-row{display:flex;align-items:center;gap:10px;padding:6px 0}
+.task-check{width:22px;height:22px;border-radius:7px;border:2px solid var(--bd);flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.task-check.on{background:var(--grn);border-color:var(--grn)}
+.task-check.on::after{content:"";width:6px;height:10px;border:2px solid #fff;border-top:0;border-left:0;transform:rotate(45deg) translate(-1px,-1px)}
+.task-text{flex:1;font-size:14px}
+.task-text.done{color:var(--t3);text-decoration:line-through}
+.task-tag{font-size:11px;padding:1px 8px;border-radius:6px;flex-shrink:0}
+.task-tag.cn{background:var(--pri-l);color:var(--pri)}
+.task-tag.ma{background:var(--acc-l);color:var(--acc-d)}
+.task-tag.en{background:var(--grn-l);color:var(--grn)}
+
+/* Pages */
+.page{display:none}.page.on{display:block;animation:fi .25s}
+@keyframes fi{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+
+/* Subject page header */
+.subj-header{padding:20px 20px 12px}
+.subj-header h2{font-size:20px;font-weight:700}
+.subj-header .week-info{font-size:13px;color:var(--t2);margin-top:2px}
+
+/* Week tabs */
+.week-tabs{display:flex;gap:8px;padding:0 16px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.week-tabs::-webkit-scrollbar{display:none}
+.wtab{padding:6px 16px;border-radius:20px;font-size:13px;white-space:nowrap;background:var(--card);color:var(--t2);border:1.5px solid var(--bd);cursor:pointer;transition:all .2s;flex-shrink:0}
+.wtab.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.wtab.locked{opacity:.5}
+
+/* Lesson card */
+.lesson{background:var(--card);border-radius:var(--r);margin:0 16px 12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04);transition:transform .15s}
+.lesson:active{transform:scale(.985)}
+.lesson-head{padding:14px 16px 10px;display:flex;align-items:center;gap:12px}
+.lesson-num{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;flex-shrink:0}
+.lesson-num.cn{background:var(--pri-l);color:var(--pri)}
+.lesson-num.ma{background:var(--acc-l);color:var(--acc-d)}
+.lesson-num.en{background:var(--grn-l);color:var(--grn)}
+.lesson-title{flex:1;font-size:15px;font-weight:600}
+.lesson-lock{color:var(--t3);font-size:14px}
+.lesson-body{padding:0 16px 14px}
+.lesson-points{margin-bottom:10px}
+.lesson-points li{font-size:13px;color:var(--t2);padding:3px 0 3px 16px;position:relative;list-style:none}
+.lesson-points li::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--pri);position:absolute;left:2px;top:11px}
+.lesson-points.ma li::before{background:var(--acc)}
+.lesson-points.en li::before{background:var(--grn)}
+
+/* Audio player */
+.audio-bar{display:flex;align-items:center;gap:10px;background:var(--bg);border-radius:var(--rs);padding:10px 12px;margin-bottom:10px}
+.play-btn{width:36px;height:36px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;font-size:14px;cursor:pointer;flex-shrink:0;transition:transform .15s}
+.play-btn:active{transform:scale(.9)}
+.play-btn.cn{background:var(--pri);color:#fff}
+.play-btn.ma{background:var(--acc);color:#fff}
+.play-btn.en{background:var(--grn);color:#fff}
+.audio-info{flex:1;font-size:12px;color:var(--t2)}
+.audio-info .playing{display:flex;align-items:center;gap:4px}
+.audio-wave{display:inline-flex;gap:2px;align-items:center;height:14px}
+.audio-wave span{width:2px;background:var(--pri);border-radius:1px;animation:wv .8s infinite ease-in-out}
+.audio-wave span:nth-child(2){animation-delay:.15s}
+.audio-wave span:nth-child(3){animation-delay:.3s}
+.audio-wave span:nth-child(4){animation-delay:.45s}
+@keyframes wv{0%,100%{height:4px}50%{height:14px}}
+.speed-btn{font-size:11px;padding:3px 8px;border-radius:6px;background:var(--card);border:1px solid var(--bd);color:var(--t2);cursor:pointer}
+
+/* Video embed */
+.video-wrap{position:relative;border-radius:var(--rs);overflow:hidden;margin-bottom:10px;background:#000}
+.video-wrap iframe{width:100%;aspect-ratio:16/9;border:none;display:block}
+.video-link-btn{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--pri);cursor:pointer;padding:6px 0}
+.video-link-btn:active{opacity:.7}
+
+/* Task area */
+.lesson-task{background:var(--bg);border-radius:var(--rs);padding:10px 12px;margin-bottom:10px}
+.lesson-task .task-label{font-size:12px;color:var(--t2);margin-bottom:4px}
+.lesson-task .task-content{font-size:14px}
+.lesson-checkin{display:flex;gap:8px}
+.btn-checkin{flex:1;padding:10px;border-radius:var(--rs);border:none;font-size:14px;font-weight:600;cursor:pointer;transition:all .2s;font-family:inherit}
+.btn-checkin.cn{background:var(--pri-l);color:var(--pri)}
+.btn-checkin.ma{background:var(--acc-l);color:var(--acc-d)}
+.btn-checkin.en{background:var(--grn-l);color:var(--grn)}
+.btn-checkin.done{background:var(--grn);color:#fff}
+.btn-checkin:active{transform:scale(.97)}
+
+/* Stats page */
+.stat-card{background:var(--card);border-radius:var(--r);margin:0 16px 12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+.stat-row{display:flex;justify-content:space-between;align-items:center;padding:6px 0}
+.stat-row .lbl{font-size:14px;color:var(--t2)}
+.stat-row .val{font-size:18px;font-weight:700}
+.streak-badge{display:inline-flex;align-items:center;gap:4px;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:600}
+.streak-badge.fire{background:#FFF3E0;color:#E65100}
+.chart-box{position:relative;height:200px;margin-top:8px}
+
+/* Profile page */
+.profile-header{background:linear-gradient(135deg,#6366F1,#818CF8);color:#fff;padding:28px 20px 24px;text-align:center}
+.profile-avatar{width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:32px;margin:0 auto 8px}
+.profile-name{font-size:18px;font-weight:600}
+.profile-grade{font-size:13px;opacity:.8;margin-top:2px}
+.menu-item{display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--card);border-bottom:1px solid var(--bd);cursor:pointer}
+.menu-item:first-child{border-radius:var(--r) var(--r) 0 0}
+.menu-item:last-child{border-radius:0 0 var(--r) var(--r);border-bottom:none}
+.menu-item:active{background:var(--bg)}
+.menu-icon{font-size:20px;width:24px;text-align:center}
+.menu-text{flex:1;font-size:14px}
+.menu-arrow{color:var(--t3)}
+.menu-group{margin:0 16px 12px;border-radius:var(--r);overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+
+/* Bottom tab bar */
+.tabbar{position:fixed;bottom:0;left:0;right:0;max-width:480px;margin:0 auto;background:rgba(255,255,255,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--bd);display:flex;padding:6px 0 calc(6px + var(--safe-b));z-index:100}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;cursor:pointer;transition:all .2s}
+.tab .tab-ic{font-size:22px;transition:transform .2s}
+.tab .tab-lb{font-size:10px;color:var(--t3)}
+.tab.on .tab-ic{transform:scale(1.1)}
+.tab.on .tab-lb{color:var(--pri);font-weight:600}
+
+/* Confetti */
+.confetti{position:fixed;width:8px;height:8px;z-index:9999;pointer-events:none}
+
+/* Egg */
+.egg-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;display:none;align-items:center;justify-content:center}
+.egg-overlay.on{display:flex}
+.egg-box{background:#fff;border-radius:24px;padding:32px 28px;text-align:center;max-width:300px;animation:eggIn .4s cubic-bezier(.34,1.56,.64,1)}
+@keyframes eggIn{from{opacity:0;transform:scale(.5)}to{opacity:1;transform:scale(1)}}
+.egg-emoji{font-size:64px;margin-bottom:8px;animation:eggBounce 1s infinite ease-in-out}
+@keyframes eggBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+.egg-text{font-size:18px;font-weight:700;color:var(--t1);margin-bottom:4px}
+.egg-sub{font-size:14px;color:var(--t2)}
+.egg-btn{margin-top:16px;padding:10px 32px;border-radius:24px;border:none;background:var(--pri);color:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
+
+/* Toast */
+.toast{position:fixed;bottom:calc(90px + var(--safe-b));left:50%;transform:translateX(-50%);background:rgba(30,41,59,.9);color:#fff;padding:8px 20px;border-radius:24px;font-size:13px;z-index:10000;animation:ti .3s}
+@keyframes ti{from{opacity:0;transform:translateX(-50%) translateY(10px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:9997;display:none;align-items:flex-end;justify-content:center}
+.modal-overlay.on{display:flex}
+.modal-box{background:#fff;border-radius:24px 24px 0 0;width:100%;max-width:480px;padding:20px 20px calc(20px + var(--safe-b));animation:ms .3s}
+@keyframes ms{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.modal-title{font-size:17px;font-weight:600;text-align:center;margin-bottom:16px}
+.modal-input{width:100%;padding:12px;border:1.5px solid var(--bd);border-radius:var(--rs);font-size:14px;margin-bottom:10px;font-family:inherit}
+.modal-input:focus{border-color:var(--pri)}
+.modal-btns{display:flex;gap:10px;margin-top:8px}
+.modal-btn{flex:1;padding:12px;border-radius:var(--rs);border:none;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit}
+.modal-btn.primary{background:var(--pri);color:#fff}
+.modal-btn.cancel{background:var(--bg);color:var(--t2)}
+
+/* Empty */
+.empty{text-align:center;padding:40px 20px;color:var(--t3);font-size:14px}
+
+/* Video modal */
+.video-modal{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:9999;display:none;align-items:center;justify-content:center;flex-direction:column}
+.video-modal.on{display:flex}
+.video-modal iframe{width:100%;max-width:480px;aspect-ratio:16/9;border:none}
+.video-close{margin-top:16px;color:#fff;font-size:14px;padding:8px 24px;background:rgba(255,255,255,.15);border-radius:20px;cursor:pointer}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- ===== HOME ===== -->
+<div class="page on" id="pg-home">
+<div class="topbar">
+<div class="greet" id="greetTxt">你好呀～</div>
+<div class="date" id="dateTxt">8月1日 星期六</div>
+<div class="sub" id="subTxt">暑假第5周 · 四升五衔接</div>
+<div class="ring-wrap">
+<div class="ring">
+<svg width="100" height="100">
+<circle class="ring-bg" cx="50" cy="50" r="42"/>
+<circle class="ring-fg" id="ringFg" cx="50" cy="50" r="42" stroke-dasharray="264" stroke-dashoffset="264"/>
+</svg>
+<div class="ring-txt"><div class="num" id="ringNum">0%</div><div class="lbl">今日完成</div></div>
+</div>
+</div>
+</div>
+<div class="subj-grid" id="subjGrid"></div>
+<div class="section-title">📋 今日任务清单</div>
+<div id="todayTasks" style="padding:0 16px 12px"></div>
+</div>
+
+<!-- ===== CHINESE ===== -->
+<div class="page" id="pg-cn">
+<div class="subj-header" style="background:linear-gradient(135deg,#6366F1,#818CF8);color:#fff;margin:0;border-radius:0 0 0 0">
+<h2>📚 语文 · 统编版</h2>
+<div class="week-info" style="color:rgba(255,255,255,.8)">五年级上册 · 循序渐进</div>
+</div>
+<div class="week-tabs" id="cnWeeks"></div>
+<div id="cnLessons" style="padding-top:4px"></div>
+</div>
+
+<!-- ===== MATH ===== -->
+<div class="page" id="pg-ma">
+<div class="subj-header" style="background:linear-gradient(135deg,#F59E0B,#FBBF24);color:#fff">
+<h2>🔢 数学 · 沪教版</h2>
+<div class="week-info" style="color:rgba(255,255,255,.8)">五年级上册 · 循序渐进</div>
+</div>
+<div class="week-tabs" id="maWeeks"></div>
+<div id="maLessons" style="padding-top:4px"></div>
+</div>
+
+<!-- ===== ENGLISH ===== -->
+<div class="page" id="pg-en">
+<div class="subj-header" style="background:linear-gradient(135deg,#10B981,#34D399);color:#fff">
+<h2>🔤 英语 · 牛津上海版</h2>
+<div class="week-info" style="color:rgba(255,255,255,.8)">五年级上册 · 循序渐进</div>
+</div>
+<div class="week-tabs" id="enWeeks"></div>
+<div id="enLessons" style="padding-top:4px"></div>
+</div>
+
+<!-- ===== PROFILE ===== -->
+<div class="page" id="pg-me">
+<div class="profile-header">
+<div class="profile-avatar">🎓</div>
+<div class="profile-name">小同学</div>
+<div class="profile-grade">四升五 · 暑假衔接中</div>
+</div>
+<div style="padding:16px 0">
+<div class="section-title">📊 本周统计</div>
+<div class="stat-card">
+<div class="stat-row"><span class="lbl">📅 连续打卡</span><span class="streak-badge fire" id="streakBadge">🔥 0 天</span></div>
+<div class="stat-row"><span class="lbl">✅ 本周完成</span><span class="val" id="weekDone">0/15</span></div>
+<div class="stat-row"><span class="lbl">📈 总完成率</span><span class="val" id="totalRate">0%</span></div>
+</div>
+<div class="stat-card">
+<div style="font-size:14px;font-weight:600;margin-bottom:8px">本周各科进度</div>
+<div class="chart-box"><canvas id="chartSubj"></canvas></div>
+</div>
+</div>
+<div class="section-title">⚙️ 设置</div>
+<div class="menu-group">
+<div class="menu-item" onclick="exportData()"><span class="menu-icon">📥</span><span class="menu-text">导出数据</span><span class="menu-arrow">›</span></div>
+<div class="menu-item" onclick="document.getElementById('importFile').click()"><span class="menu-icon">📤</span><span class="menu-text">导入数据</span><span class="menu-arrow">›</span></div>
+<div class="menu-item" onclick="resetData()"><span class="menu-icon">🗑️</span><span class="menu-text">重置数据</span><span class="menu-arrow">›</span></div>
+</div>
+<input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+<div class="menu-group">
+<div class="menu-item" onclick="showInstallGuide()"><span class="menu-icon">📱</span><span class="menu-text">添加到手机桌面</span><span class="menu-arrow">›</span></div>
+<div class="menu-item" onclick="toast('版本 v2.0 · 2026-08-01')"><span class="menu-icon">ℹ️</span><span class="menu-text">关于</span><span class="menu-arrow">›</span></div>
+</div>
+</div>
+
+</div>
+
+<!-- Tab bar -->
+<div class="tabbar">
+<div class="tab on" data-p="home"><span class="tab-ic">🏠</span><span class="tab-lb">今日</span></div>
+<div class="tab" data-p="cn"><span class="tab-ic">📚</span><span class="tab-lb">语文</span></div>
+<div class="tab" data-p="ma"><span class="tab-ic">🔢</span><span class="tab-lb">数学</span></div>
+<div class="tab" data-p="en"><span class="tab-ic">🔤</span><span class="tab-lb">英语</span></div>
+<div class="tab" data-p="me"><span class="tab-ic">👤</span><span class="tab-lb">我的</span></div>
+</div>
+
+<!-- Egg overlay -->
+<div class="egg-overlay" id="eggOv">
+<div class="egg-box">
+<div class="egg-emoji">🥚</div>
+<div class="egg-text">你好棒！</div>
+<div class="egg-sub" id="eggSub">今日打卡全部完成！</div>
+<button class="egg-btn" onclick="hideEgg()">继续加油</button>
+</div>
+</div>
+
+<!-- Video modal -->
+<div class="video-modal" id="videoModal">
+<iframe id="videoFrame" src="" allowfullscreen></iframe>
+<div class="video-close" onclick="closeVideo()">关闭视频</div>
+</div>
+
+<!-- Install guide modal -->
+<div class="modal-overlay" id="installModal">
+<div class="modal-box">
+<div class="modal-title">📱 添加到手机桌面</div>
+<div style="font-size:14px;color:var(--t2);line-height:1.7;margin-bottom:12px">
+<b>iPhone：</b><br>
+1. 用 Safari 打开本页面<br>
+2. 点底部「分享」按钮<br>
+3. 选「添加到主屏幕」<br>
+4. 点「添加」即可像 App 一样使用<br><br>
+<b>iPad：</b>操作同上<br><br>
+<b>安卓：</b>浏览器菜单→「添加到主屏幕」
+</div>
+<div class="modal-btns">
+<button class="modal-btn cancel" onclick="document.getElementById('installModal').classList.remove('on')">知道了</button>
+</div>
+</div>
+</div>
+
+<script>
+/* ===== DATA ===== */
+var K='sw_v2',D={};
+var CN_WEEKS=[
+{t:"第1周·第一单元",lessons:[
+{t:"第1课 草原（老舍）",pts:["了解内蒙古草原的自然风光和民族风情","学习比喻、拟人等修辞手法","积累描写景物的优美词句"],audio:"今天我们学习老舍先生的《草原》。这篇课文描写了内蒙古大草原的美丽风光。作者用生动的语言，描绘了草原的天、地、羊群，以及蒙古族人民的热情好客。请同学们注意文中的比喻句和拟人句，体会作者对草原的热爱之情。",task:"朗读课文2遍，摘抄3个好词好句",video:"bilibili:草原 老舍 课文朗读"},
+{t:"第2课 丝绸之路",pts:["了解丝绸之路的历史意义","学习按时间顺序叙事的方法","积累与历史相关的词语"],audio:"今天学习《丝绸之路》。丝绸之路是古代中国通往西亚和欧洲的贸易通道。课文讲述了张骞出使西域的故事，展现了中国古代对外开放的历史。请同学们注意课文是按时间顺序来写的。",task:"复述丝绸之路的故事，写100字摘要",video:"bilibili:丝绸之路 课文讲解"},
+{t:"词语盘点（一）",pts:["掌握第一单元生字词","理解词语含义并造句","辨析近义词和反义词"],audio:"今天进行第一单元词语盘点。请同学们跟着朗读：毯、陈、裳、虹、蹄、腐、稍、微。这些是第一单元的重点生字。注意裳字的读音是轻声，蹄字的偏旁是足字旁。",task:"听写第一单元生字词，每个词造一个句子",video:"bilibili:五年级上册语文第一单元生字"},
+{t:"口语交际：策划一次活动",pts:["学习策划活动的基本步骤","练习口头表达和组织语言","培养合作意识"],audio:"今天练习口语交际，主题是策划一次活动。策划活动需要考虑：活动目的、时间地点、参加人员、活动流程、准备工作。请同学们想一想，如果让你策划一次班级读书会，你会怎么安排呢？",task:"口头策划一次读书会，录音3分钟",video:"bilibili:口语交际 策划活动"},
+{t:"作文：写一处自然景观",pts:["学习按方位顺序描写景物","运用比喻、拟人等修辞","表达真实感受"],audio:"今天练习写作文，题目是写一处自然景观。写景作文要注意：第一，按一定顺序写，可以按方位顺序，也可以按时间顺序。第二，运用比喻和拟人等修辞手法，让描写更生动。第三，要写出自己的真实感受。",task:"写一篇300字的写景作文",video:"bilibili:五年级写景作文指导"}
+]},
+{t:"第2周·第二单元",lessons:[
+{t:"第5课 古诗词三首",pts:["背诵《蝉》《乞巧》《示儿》","理解诗意和诗人情感","学习借景抒情的写法"],audio:"今天学习古诗词三首。第一首《蝉》，作者是虞世南。诗句是：垂緌饮清露，流响出疏桐。居高声自远，非是藉秋风。这首诗借蝉的形象，表达诗人高洁的品格。第二首《乞巧》，作者林杰，描写七夕节的习俗。第三首《示儿》，作者陆游，是诗人的绝笔诗，表达了对国家统一的渴望。",task:"背诵三首古诗，默写《示儿》",video:"bilibili:五年级上册古诗词三首讲解"},
+{t:"第6课 题临安邸",pts:["理解诗歌讽刺的深层含义","学习对比的表现手法","感受诗人的爱国情怀"],audio:"今天学习《题临安邸》，作者林升。山外青山楼外楼，西湖歌舞几时休？暖风熏得游人醉，直把杭州作汴州。这首诗讽刺了南宋统治者苟且偷安，忘记了北方沦陷的国土。诗中用对比手法，把杭州的歌舞升平和汴州的沦陷形成鲜明对比。",task:"背诵并默写《题临安邸》，写50字赏析",video:"bilibili:题临安邸 讲解"},
+{t:"第7课 己亥杂诗",pts:["理解诗歌表达变革的愿望","学习借物言志的手法","积累龚自珍的文学常识"],audio:"今天学习《己亥杂诗》，作者龚自珍。九州生气恃风雷，万马齐喑究可哀。我劝天公重抖擞，不拘一格降人才。这首诗表达了诗人对社会变革的强烈愿望，希望朝廷能破格任用人才，改变万马齐喑的沉闷局面。",task:"背诵默写，写100字读后感",video:"bilibili:己亥杂诗 龚自珍"},
+{t:"词语盘点（二）",pts:["掌握第二单元生字词","积累古诗词中的名句","练习词语搭配"],audio:"第二单元词语盘点。重点词语：黎明、红晕、漆黑、降临、愈发、悠闲、凛冽。请同学们注意凛冽的读音，凛是前鼻音，冽是四声。这些词语多用来描写自然景色，请在作文中尝试使用。",task:"听写第二单元词语，选择3个造句",video:"bilibili:五年级上册第二单元词语"},
+{t:"作文：写一篇读后感",pts:["掌握读后感的基本结构","学习联系实际谈感受","做到有叙有议"],audio:"今天练习写读后感。读后感的基本结构是：引，简要介绍读过的文章或书；议，写出自己的理解和感受；联，联系自己的生活实际；结，总结全文，点明主旨。重点是要写出真实的感受，不能只复述故事内容。",task:"写一篇400字的读后感",video:"bilibili:五年级读后感写法指导"}
+]},
+{t:"第3周·第三单元",lessons:[
+{t:"第9课 猎人海力布",pts:["了解民间故事的特点","学习通过对话推动情节","感受海力布舍己为人的精神"],audio:"今天学习《猎人海力布》。这是一篇民间故事，讲述了猎人海力布救了龙王的女儿，得到了能听懂动物语言的宝石。但他不能把听到的告诉别人，否则就会变成石头。为了救乡亲们，他选择了说出真相，最终变成了石头。故事赞美了海力布舍己为人的精神。",task:"复述故事，写200字缩写",video:"bilibili:猎人海力布 课文讲解"},
+{t:"第10课 牛郎织女（一）",pts:["了解中国四大民间故事","学习按时间顺序叙述","分析人物形象"],audio:"今天学习《牛郎织女》第一部分。这是中国古代四大民间故事之一。课文讲述了牛郎从小失去父母，被哥哥嫂子虐待，与老牛相依为命。后来在老牛的帮助下，认识了织女，两人结为夫妻。故事反映了古代劳动人民对美好生活的向往。",task:"讲牛郎织女的故事给家人听",video:"bilibili:牛郎织女 课文朗读"},
+{t:"缩写《牛郎织女》",pts:["学习缩写的方法","保留主要内容，删减细节","语言简洁流畅"],audio:"今天练习缩写《牛郎织女》。缩写的方法是：第一，读懂原文，理清故事的主要情节。第二，保留主要内容，删去次要内容。第三，用自己的话把故事写出来，语言要简洁。注意缩写不是简单删减，要保持故事完整性。",task:"缩写《牛郎织女》，300字以内",video:"bilibili:缩写方法指导 小学语文"},
+{t:"口语交际：讲民间故事",pts:["练习绘声绘色地讲故事","学习运用语气和表情","培养表达能力"],audio:"今天练习讲民间故事。讲故事要注意：第一，声音要有变化，不同的人物用不同的语气。第二，适当加入表情和动作，让故事更生动。第三，可以适当加入自己的想象，丰富故事内容。请大家选一个自己喜欢的民间故事，讲给同学听。",task:"选一个民间故事，录音5分钟",video:"bilibili:讲民间故事 技巧"},
+{t:"作文：缩写故事",pts:["掌握缩写的要领","做到详略得当","保持故事原貌"],audio:"今天练习作文缩写故事。缩写故事要做到：读懂原故事，分清主次，保留主要情节和人物，删去不必要的细节描写，用自己的语言简练地叙述。字数一般是原文的三分之一到一半。",task:"缩写一个民间故事，400字",video:"bilibili:缩写故事 作文指导"}
+]},
+{t:"第4周·第四单元",lessons:[
+{t:"第12课 古诗三首",pts:["背诵《示儿》《题临安邸》《己亥杂诗》","理解爱国主题","学习借古讽今的手法"],audio:"今天学习第四单元古诗三首。这三首诗都以爱国为主题。《示儿》是陆游的绝笔，表达渴望国家统一的愿望。《题临安邸》讽刺南宋统治者苟且偷安。《己亥杂诗》表达对社会变革的期待。三首诗都表达了诗人的爱国情怀。",task:"三首古诗背诵默写",video:"bilibili:五年级上册第四单元古诗"},
+{t:"第13课 少年中国说（节选）",pts:["理解少年中国与中国少年的关系","学习排比、对偶的修辞","感受梁启超的爱国热情"],audio:"今天学习梁启超的《少年中国说》节选。少年智则国智，少年富则国富，少年强则国强。这篇文章把少年中国的命运和中国少年的责任紧密联系在一起，表达了作者对祖国未来的期望和对少年的勉励。请同学们体会排比句的气势。",task:"朗读课文3遍，背诵第一段",video:"bilibili:少年中国说 课文讲解"},
+{t:"第15课 圆明园的毁灭",pts:["了解圆明园的辉煌与毁灭","学习对比的写法","激发爱国情感"],audio:"今天学习《圆明园的毁灭》。课文先写圆明园昔日的辉煌，它是当时世界上最大的博物馆和艺术馆。然后写1860年被英法联军焚毁的经过。作者用大量笔墨写圆明园的辉煌，是为了反衬毁灭的可惜，激发读者的爱国情感和振兴中华的责任感。",task:"写200字读后感",video:"bilibili:圆明园的毁灭 课文"},
+{t:"词语盘点（四）",pts:["掌握第四单元生字词","积累爱国主题词语","练习关联词造句"],audio:"第四单元词语盘点。重点词语：毁灭、象征、众星拱月、玲珑剔透、举世闻名、奇珍异宝。注意玲珑剔透的剔字读一声。这些词语多与建筑和文物有关，请同学们在写作中尝试运用。",task:"听写第四单元词语，选3个造句",video:"bilibili:五年级上册第四单元词语"},
+{t:"作文：写一篇演讲稿",pts:["掌握演讲稿的基本格式","学习观点明确、理由充分","练习有感染力的语言"],audio:"今天练习写演讲稿。演讲稿的格式：开头称呼，正文用观点加理由的方式展开，结尾发出号召。写演讲稿要注意：观点要明确，理由要充分，语言要有感染力，可以适当用反问句和排比句来增强气势。",task:"写一篇400字的演讲稿",video:"bilibili:演讲稿写作指导 小学"}
+]}
+];
+var MA_WEEKS=[
+{t:"第1周·小数乘法",lessons:[
+{t:"小数乘整数",pts:["理解小数乘整数的算理","掌握竖式计算方法","确定积的小数位数"],audio:"今天学习小数乘整数。比如3.5乘以3，就是把3.5扩大3倍。计算方法：先按整数乘法算出积，再看小数有几位，积就有几位小数。3.5是一位小数，所以积也是一位小数。注意：积的小数部分末尾有0的，要去掉末尾的0。",task:"完成15道小数乘整数计算题",video:"bilibili:小数乘整数 五年级数学"},
+{t:"小数乘小数",pts:["掌握小数乘小数的计算法则","理解积的小数位数确定方法","处理积末尾的零"],audio:"今天学习小数乘小数。比如2.6乘以0.8。计算方法：先按整数乘法算出26乘8等于208。然后看两个因数一共有几位小数，2.6是一位，0.8是一位，共两位小数。所以从积的右边起数出两位点上小数点，结果是2.08。如果位数不够，要在前面用0补足。",task:"完成15道小数乘小数计算题",video:"bilibili:小数乘小数 讲解"},
+{t:"积的近似值",pts:["学会用四舍五入法求积的近似值","根据要求保留小数位数","理解精确度的概念"],audio:"今天学习求积的近似值。方法：先算出准确的积，再用四舍五入法保留指定的小数位数。比如3.14乘2.5等于7.85，保留一位小数就是7.9。注意：保留几位小数要看下一位，大于等于5进1，小于5舍去。",task:"完成10道求近似值的题目",video:"bilibili:积的近似值 四舍五入"},
+{t:"简便运算",pts:["运用乘法运算定律进行简便计算","掌握凑整、拆数等技巧","提高计算速度和准确率"],audio:"今天学习小数乘法的简便运算。常用的方法有：乘法交换律、乘法结合律、乘法分配律。比如0.25乘4.8，可以把4.8拆成4乘1.2，先算0.25乘4等于1，再乘1.2等于1.2。看到0.25就要想到4，看到1.25就要想到8。",task:"完成10道简便运算题",video:"bilibili:小数乘法简便运算"},
+{t:"小数乘法综合练习",pts:["综合运用小数乘法知识","解决实际生活中的问题","查漏补缺巩固提高"],audio:"今天进行小数乘法综合练习。请同学们注意几个易错点：第一，积的小数位数要数对。第二，末尾的0要去掉。第三，简便运算要灵活运用运算定律。做应用题时，要先理解题意，再列式计算，最后写答语。",task:"完成一套综合练习卷（20题）",video:"bilibili:小数乘法综合练习 五年级"}
+]},
+{t:"第2周·小数除法",lessons:[
+{t:"小数除以整数",pts:["掌握小数除以整数的计算方法","理解商的小数点对齐法则","处理除不尽的情况"],audio:"今天学习小数除以整数。比如7.2除以6。计算方法：按整数除法的方法去除，商的小数点要和被除数的小数点对齐。7.2除以6，先算7除以6商1余1，再落下2，12除以6商2，所以结果是1.2。如果整数部分不够除，商的整数部分写0。",task:"完成15道小数除以整数",video:"bilibili:小数除以整数 讲解"},
+{t:"小数除以小数",pts:["掌握除数是小数的除法计算","理解转化为除数是整数的方法","正确移动小数点"],audio:"今天学习小数除以小数。比如4.68除以1.2。方法：先把除数变成整数，1.2变成12，小数点向右移动一位。被除数也要向右移动相同的位数，4.68变成46.8。然后按小数除以整数的方法计算。46.8除以12等于3.9。记住：除数移动几位，被除数也移动几位。",task:"完成15道小数除以小数",video:"bilibili:一个数除以小数"},
+{t:"商的近似值",pts:["学会求商的近似值","掌握四舍五入的方法","理解保留位数与精确度的关系"],audio:"今天学习求商的近似值。方法：先按除法算出商，多除一位，然后用四舍五入法保留需要的小数位数。比如1.55除以3.9，如果保留两位小数，就除到第三位小数，看第三位四舍五入。注意：求近似值时要比保留的位数多除一位。",task:"完成10道求商近似值的题目",video:"bilibili:商的近似值 五年级"},
+{t:"循环小数",pts:["认识循环小数的概念","区分有限小数和无限小数","学会用简便记法表示循环小数"],audio:"今天学习循环小数。一个数的小数部分，从某一位起，一个数字或几个数字依次不断重复出现，这样的小数叫循环小数。比如10除以3等于3.333...，3不断重复，记作3.3循环节。循环节从小数部分第一位开始的叫纯循环小数，不是从第一位开始的叫混循环小数。",task:"完成10道循环小数判断和表示题",video:"bilibili:循环小数 概念讲解"},
+{t:"小数除法综合练习",pts:["综合运用小数除法知识","解决生活中的实际问题","提高计算准确率"],audio:"今天进行小数除法综合练习。易错点提醒：第一，除数是小数时，要先移动小数点。第二，商的小数点要对齐。第三，注意区分有限小数和循环小数。做应用题时，要特别注意单位换算，比如元和角、米和厘米的换算。",task:"完成综合练习卷（20题）",video:"bilibili:小数除法综合练习"}
+]},
+{t:"第3周·简易方程",lessons:[
+{t:"用字母表示数",pts:["学会用字母表示数和数量关系","理解字母表示数的优越性","掌握含字母式子的书写规范"],audio:"今天学习用字母表示数。用字母表示数可以简明地表示数量关系。比如用a表示苹果的单价，买5个苹果就是5乘a。书写时注意：数字和字母相乘，乘号可以省略，数字写在字母前面。字母和字母相乘，乘号也可以省略。",task:"完成10道用字母表示数的练习",video:"bilibili:用字母表示数 五年级"},
+{t:"方程的意义",pts:["理解方程的概念","区分等式和方程","学会列方程表示等量关系"],audio:"今天学习方程的意义。含有未知数的等式叫方程。比如x加3等于8，这就是方程。方程必须是等式，而且必须含有未知数。判断一个式子是不是方程，要看两点：第一是不是等式，第二有没有未知数。两个条件缺一不可。",task:"完成10道判断方程的练习",video:"bilibili:方程的意义 小学数学"},
+{t:"解方程（一）",pts:["掌握等式性质解方程","学会解形如x+a=b的方程","养成检验的习惯"],audio:"今天学习解方程。利用等式的性质：等式两边同时加上或减去同一个数，等式仍然成立。比如解x加15等于40，两边同时减15，x等于40减15，x等于25。解完方程后要检验：把x的值代入原方程，看左右两边是否相等。",task:"完成10道解方程练习",video:"bilibili:解方程 五年级上册"},
+{t:"解方程（二）",pts:["学会解形如ax=b的方程","利用等式性质2解方程","综合运用两个性质"],audio:"今天继续学习解方程。利用等式的性质2：等式两边同时乘或除以同一个不为0的数，等式仍然成立。比如解3x等于18，两边同时除以3，x等于6。对于ax加b等于c类型的方程，先把ax看作一个整体，先减b再除以a。",task:"完成10道解方程练习",video:"bilibili:解方程类型题讲解"},
+{t:"实际问题与方程",pts:["学会列方程解应用题","找出等量关系列方程","比较算术法和方程法"],audio:"今天学习列方程解决实际问题。步骤：第一，设未知数为x。第二，找出等量关系。第三，根据等量关系列方程。第四，解方程。第五，检验并写答语。关键是找等量关系。比如：原来有一些苹果，又买来15个，现在共有40个，原来有多少个？设原来有x个，列方程x加15等于40。",task:"完成5道列方程解应用题",video:"bilibili:列方程解应用题"}
+]},
+{t:"第4周·多边形的面积",lessons:[
+{t:"平行四边形的面积",pts:["掌握平行四边形面积公式","理解割补法推导过程","正确计算面积"],audio:"今天学习平行四边形的面积。通过割补法，可以把平行四边形转化成长方形。平行四边形的底就是长方形的长，平行四边形的高就是长方形的宽。所以平行四边形的面积等于底乘以高。用字母表示是S等于a乘h。注意：底和高要对应。",task:"完成10道平行四边形面积计算",video:"bilibili:平行四边形的面积 推导"},
+{t:"三角形的面积",pts:["掌握三角形面积公式","理解两个三角形拼成平行四边形","正确计算面积"],audio:"今天学习三角形的面积。两个完全一样的三角形可以拼成一个平行四边形。三角形的面积就是平行四边形面积的一半。所以三角形的面积等于底乘以高除以2。用字母表示是S等于a乘h除以2。注意：除以2不要忘记。",task:"完成10道三角形面积计算",video:"bilibili:三角形的面积 推导"},
+{t:"梯形的面积",pts:["掌握梯形面积公式","理解两个梯形拼成平行四边形","正确计算面积"],audio:"今天学习梯形的面积。两个完全一样的梯形可以拼成一个平行四边形。平行四边形的底是梯形的上底加下底，高是梯形的高。所以梯形的面积等于上底加下底的和乘以高除以2。用字母表示是S等于(a加b)乘h除以2。",task:"完成10道梯形面积计算",video:"bilibili:梯形的面积 推导讲解"},
+{t:"组合图形的面积",pts:["学会分解组合图形","用分割法和添补法计算","灵活运用面积公式"],audio:"今天学习组合图形的面积。组合图形是由几个简单图形组合而成的。计算方法有两种：分割法，把组合图形分成几个简单图形，分别算面积再相加。添补法，把组合图形补成一个大的简单图形，减去补上的部分。要选择最简便的方法。",task:"完成5道组合图形面积计算",video:"bilibili:组合图形的面积"},
+{t:"面积综合应用",pts:["综合运用面积公式","解决实际生活中的面积问题","理解面积单位换算"],audio:"今天进行面积综合练习。要熟练掌握三个面积公式：平行四边形等于底乘高，三角形等于底乘高除以2，梯形等于上底加下底的和乘高除以2。做应用题时注意单位统一，比如米和分米的换算。还要注意区分周长和面积的不同。",task:"完成综合练习卷（15题）",video:"bilibili:多边形面积综合练习"}
+]}
+];
+var EN_WEEKS=[
+{t:"第1周·M1U1 Future Jobs",lessons:[
+{t:"核心词汇",pts:["future, pilot, teach, cook, fly","help, sick, job, worker, want","掌握发音和中文意思"],audio:"future, pilot, teach, cook, fly, help, sick, job, worker, want. Future means about the time to come. A pilot is a person who flies a plane. To teach means to help someone learn. To cook means to make food. To fly means to move through the air.",task:"抄写10个单词3遍，录音朗读",video:"bilibili:牛津上海版五年级上M1U1单词"},
+{t:"课文朗读 What do you want to be?",pts:["朗读课文并理解大意","掌握句型What do you want to be?","学会回答I want to be a/an..."],audio:"课文朗读。What do you want to be? I want to be a pilot. What do you want to be? I want to be a teacher. What does he want to be? He wants to be a cook. What does she want to be? She wants to be a doctor. 注意want to后面用动词原形。",task:"朗读课文3遍，背诵对话",video:"bilibili:牛津上海版五年级 M1U1 课文"},
+{t:"语法：一般现在时",pts:["掌握一般现在时的用法","动词第三人称单数变化规则","区分do和does的用法"],audio:"一般现在时表示经常性或习惯性的动作。主语是第三人称单数时，动词要加s或es。比如I want to be a pilot，但He wants to be a pilot。疑问句用do或does提问，第三人称单数用does。比如What does he want to be?",task:"完成10道一般现在时练习题",video:"bilibili:一般现在时 小学英语语法"},
+{t:"对话练习",pts:["运用句型进行问答","谈论未来的职业理想","练习口语表达"],audio:"对话练习。请跟读：What do you want to be? I want to be a pilot. I want to fly a plane. What do you want to be? I want to be a teacher. I want to teach children. What does your father do? He is a worker. He works in a factory. 请同学们和同伴练习对话。",task:"和同学对话5分钟，录音",video:"bilibili:五年级英语对话练习"},
+{t:"写作：My Future Job",pts:["用英语写5句话描述未来职业","运用一般现在时","注意大小写和标点"],audio:"写作练习。题目是My Future Job。参考范文：I want to be a teacher. I want to teach children. I like to help sick people. A doctor can help sick people. I want to be a doctor. What do you want to be? 请同学们仿写5句话，注意首字母大写，句末加标点。",task:"写5句英语描述未来职业",video:"bilibili:小学英语写作 My dream job"}
+]},
+{t:"第2周·M1U2 Fire and Safety",lessons:[
+{t:"核心词汇",pts:["fire, smoke, dangerous, safe, burn","match, careful, heat, firefighter, alarm","掌握发音和词义"],audio:"fire, smoke, dangerous, safe, burn, match, careful, heat, firefighter, alarm. Fire means the flames that are hot. Smoke is the grey thing in the air when something burns. Dangerous means not safe. Careful means being careful to avoid danger.",task:"抄写10个单词3遍，录音朗读",video:"bilibili:牛津上海版五年级 M1U2单词"},
+{t:"课文朗读 Fire safety",pts:["理解课文内容","掌握防火安全知识","朗读并回答问题"],audio:"课文朗读。Fire is dangerous. We must be careful with fire. Don't play with matches. Don't cook when there is no adult at home. If there is a fire, call 119. A firefighter can help you. We must learn about fire safety. 注意must表示必须，后面用动词原形。",task:"朗读课文3遍，回答3个问题",video:"bilibili:牛津上海版五年级 M1U2课文"},
+{t:"语法：祈使句",pts:["掌握祈使句的肯定和否定形式","学会用Don't表示禁止","理解must和mustn't的用法"],audio:"祈使句用来表示命令、请求或建议。肯定形式直接用动词原形，比如Be careful. Open the door. 否定形式在动词前加Don't，比如Don't play with fire. Don't run in the hallway. must表示必须，must not或mustn't表示不准。",task:"完成10道祈使句练习",video:"bilibili:祈使句 小学英语语法"},
+{t:"安全知识对话",pts:["运用消防安全词汇","练习What must/mustn't句型","提高口语表达"],audio:"对话练习。跟读：What must we do? We must be careful with fire. What mustn't we do? We mustn't play with matches. Is fire dangerous? Yes, it is. What should we do if there is a fire? We should call 119. 请同学们和同伴练习对话。",task:"和同学对话5分钟，录音",video:"bilibili:消防安全 英语对话"},
+{t:"写作：Fire Safety Rules",pts:["写5条消防安全规则","运用祈使句和must/mustn't","注意书写格式"],audio:"写作练习。题目是Fire Safety Rules。参考范文：Don't play with matches. Don't cook alone. We must be careful with fire. We mustn't play near the fire. If there is a fire, call 119. 请同学们写出5条消防安全规则，注意使用祈使句。",task:"写5条消防安全英语规则",video:"bilibili:英语安全规则 写作"}
+]},
+{t:"第3周·M2U1 My New Home",lessons:[
+{t:"核心词汇",pts:["bedroom, kitchen, bathroom, living room","balcony, garden, garage, upstairs, downstairs","furniture"],audio:"bedroom, kitchen, bathroom, living room, balcony, garden, garage, upstairs, downstairs, furniture. Bedroom is the room where you sleep. Kitchen is the room where you cook. Bathroom is the room where you take a bath. Living room is the room for the family to sit together.",task:"抄写10个单词3遍，录音朗读",video:"bilibili:牛津上海版五年级 M2U1单词"},
+{t:"课文朗读 My new home",pts:["理解课文内容","掌握房间名称和方位词","流利朗读课文"],audio:"课文朗读。This is my new home. It is big and nice. There are three bedrooms, a living room, a kitchen and a bathroom. My bedroom is upstairs. The living room is downstairs. There is a balcony in my bedroom. I like my new home. 注意upstairs是楼上，downstairs是楼下。",task:"朗读课文3遍，画出家平面图",video:"bilibili:牛津上海版五年级 M2U1课文"},
+{t:"语法：There be句型",pts:["掌握There is/are的用法","理解就近原则","区分单复数形式"],audio:"There be句型表示某处有某物。单数用There is，复数用There are。比如There is a bedroom upstairs. There are three bedrooms in my home. 注意就近原则：There is a book and two pens on the desk. 因为离be动词最近的是a book，单数，所以用is。",task:"完成10道There be句型练习",video:"bilibili:There be句型 小学语法"},
+{t:"方位介词练习",pts:["掌握in, on, under, behind, next to","描述物品的位置","通过对话练习"],audio:"方位介词练习。in表示在里面，on表示在上面，under表示在下面，behind表示在后面，next to表示在旁边。比如The book is on the desk. The cat is under the chair. The lamp is next to the bed. 请同学们描述自己房间里物品的位置。",task:"用5个方位介词描述房间",video:"bilibili:方位介词 英语"},
+{t:"写作：My Dream Home",pts:["描述梦想中的家","运用There be和方位词","写6-8句话"],audio:"写作练习。题目是My Dream Home。参考范文：This is my dream home. It is big and beautiful. There are five bedrooms in my home. There is a big garden. My bedroom is upstairs. There is a balcony in my room. I love my dream home. 请同学们写6到8句话。",task:"写6-8句描述梦想的家",video:"bilibili:My dream home 英语作文"}
+]},
+{t:"第4周·M2U2 Signs",lessons:[
+{t:"核心词汇",pts:["sign, mean, danger, smoke, park","wait, cross, street, turn left, turn right","掌握词义和发音"],audio:"sign, mean, danger, smoke, park, wait, cross, street, turn left, turn right. A sign is something that tells us what to do or what not to do. Mean means to have a certain meaning. Danger means something that can hurt you. To park means to stop your car somewhere.",task:"抄写10个单词3遍，录音朗读",video:"bilibili:牛津上海版五年级 M2U2单词"},
+{t:"课文朗读 Signs and rules",pts:["理解标志的含义","掌握What does this sign mean?","朗读并回答问题"],audio:"课文朗读。Look at this sign. What does it mean? It means No smoking. We mustn't smoke here. What does this sign mean? It means Don't cross the street. We must wait. What does that sign mean? It means No parking. We mustn't park here. 注意No后面用动名词形式。",task:"朗读课文3遍，画5个标志并标注",video:"bilibili:牛津上海版五年级 M2U2课文"},
+{t:"语法：情态动词",pts:["掌握must, mustn't, can, can't的用法","理解表示许可和禁止","正确运用在句型中"],audio:"情态动词can表示能够，can't表示不能。must表示必须，mustn't表示不准。比如We can cross the street now. We mustn't run on the street. You can park here. You mustn't smoke here. 情态动词后面用动词原形。",task:"完成10道情态动词练习",video:"bilibili:情态动词must can 小学"},
+{t:"标志对话练习",pts:["运用What does this sign mean?句型","描述不同标志的含义","提高口语表达"],audio:"对话练习。跟读：What does this sign mean? It means No smoking. What does that sign mean? It means No parking. Can we cross the street now? No, we mustn't. We must wait. Can I park here? No, you mustn't park here. 请同学们和同伴练习对话。",task:"和同学对话5分钟，录音",video:"bilibili:英语标志 对话练习"},
+{t:"写作：Signs in Our School",pts:["描述学校里的标志","运用What does...mean?句型","写6-8句话"],audio:"写作练习。题目是Signs in Our School。参考范文：There are many signs in our school. This sign means Be quiet. We mustn't make noise. That sign means No running. We mustn't run in the hallway. This sign means Keep clean. We must keep our school clean. 请同学们写6到8句话。",task:"写6-8句描述学校的标志",video:"bilibili:英语写作 Signs"}
+]}
+];
+var HABITS=["每天阅读30分钟","每天数学计算练习","每天英语朗读15分钟","每天运动30分钟","每天22点前睡觉"];
+var chartObj=null;
+
+/* ===== UTILS ===== */
+function uid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function td(){var d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function toast(m){var t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.remove()},2000)}
+function confetti(){var cs=['#6366F1','#F59E0B','#10B981','#EF4444','#8B5CF6','#EC4899'];for(var i=0;i<36;i++){var c=document.createElement('div');c.className='confetti';c.style.left=Math.random()*window.innerWidth+'px';c.style.top='-10px';c.style.background=cs[Math.floor(Math.random()*cs.length)];c.style.borderRadius=Math.random()>0.5?'50%':'2px';document.body.appendChild(c);var x=(Math.random()-0.5)*400,y=window.innerHeight+50;c.animate([{transform:'translate(0,0) rotate(0deg)',opacity:1},{transform:'translate('+x+'px,'+y+'px) rotate('+Math.random()*720+'deg)',opacity:0}],{duration:2000+Math.random()*1000,easing:'cubic-bezier(.3,.5,.5,1)'});setTimeout(function(){c.remove()},3000)}}
+function showEgg(sub){document.getElementById('eggSub').textContent=sub||'今日打卡全部完成！';document.getElementById('eggOv').classList.add('on');confetti()}
+function hideEgg(){document.getElementById('eggOv').classList.remove('on')}
+
+/* ===== DATA ===== */
+function load(){
+try{D=JSON.parse(localStorage.getItem(K))||{}}catch(e){D={}}
+var defs={cnDone:{},maDone:{},enDone:{},habits:[],todayTasks:[],mood:{},audioSpeed:1.0};
+for(var k in defs){if(D[k]===undefined)D[k]=(typeof defs[k]==='object'&&!Array.isArray(defs[k]))?JSON.parse(JSON.stringify(defs[k])):defs[k]}
+if(D.habits.length===0)D.habits=HABITS.map(function(n){return{id:uid(),name:n,records:{}}});
+save()
+}
+function save(){localStorage.setItem(K,JSON.stringify(D))}
+
+/* ===== NAV ===== */
+document.querySelectorAll('.tab').forEach(function(t){
+t.onclick=function(){
+document.querySelectorAll('.page').forEach(function(p){p.classList.remove('on')});
+document.getElementById('pg-'+t.dataset.p).classList.add('on');
+document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('on')});
+t.classList.add('on');
+if(t.dataset.p==='me')setTimeout(renderChart,200);
+window.scrollTo(0,0)
+}
+});
+
+/* ===== HOME ===== */
+function renderHome(){
+var d=new Date(),wd=['日','一','二','三','四','五','六'];
+var h=d.getHours();
+var g=h<6?'早安～':h<12?'上午好～':h<14?'中午好～':h<18?'下午好～':h<18?'傍晚好～':'晚上好～';
+document.getElementById('greetTxt').textContent=g;
+document.getElementById('dateTxt').textContent=(d.getMonth()+1)+'月'+d.getDate()+'日 星期'+wd[d.getDay()];
+var weeks=Math.ceil((d-new Date('2026-07-01'))/(7*24*60*60*1000));
+document.getElementById('subTxt').textContent='暑假第'+weeks+'周 · 四升五衔接';
+
+// subject cards
+var data=[{k:'cn',n:'语文',ic:'📚',cur:CN_WEEKS},{k:'ma',n:'数学',ic:'🔢',cur:MA_WEEKS},{k:'en',n:'英语',ic:'🔤',cur:EN_WEEKS}];
+var sg=document.getElementById('subjGrid');sg.innerHTML='';
+data.forEach(function(s){
+var doneKey=s.k+'Done',total=0,done=0,curW=0,curL=0;
+s.cur.forEach(function(w,wi){w.lessons.forEach(function(l,li){total++;if(D[doneKey][wi+'-'+li]){done++}else if(!curL){curW=wi;curL=li}})});
+if(done===total){curW=s.cur.length-1;curL=0}
+var pct=Math.round(done/total*100);
+var color=s.k==='cn'?'var(--pri)':s.k==='ma'?'var(--acc)':'var(--grn)';
+var card=document.createElement('div');card.className='subj-card';
+card.innerHTML='<div class="subj-icon '+s.k+'">'+s.ic+'</div><div class="subj-info"><div class="name">'+s.n+' · '+s.cur[curW].t+'</div><div class="desc">'+(s.cur[curW].lessons[curL]?s.cur[curW].lessons[curL].t:'已全部完成')+'</div><div class="subj-bar"><div class="subj-bar-fill" style="width:'+pct+'%;background:'+color+'"></div></div></div><div class="subj-arrow">›</div>';
+card.onclick=function(){document.querySelector('.tab[data-p="'+s.k+'"]').click()};
+sg.appendChild(card)
+});
+
+// today tasks
+renderTodayTasks();
+updateRing()
+}
+function renderTodayTasks(){
+var c=document.getElementById('todayTasks');
+var dk=td();
+if(!D.todayTasks.length){
+D.todayTasks=[
+{id:uid(),text:'朗读语文课文10分钟',subject:'cn',done:false},
+{id:uid(),text:'完成数学计算练习',subject:'ma',done:false},
+{id:uid(),text:'英语单词朗读+跟读',subject:'en',done:false},
+{id:uid(),text:'阅读课外书30分钟',subject:'cn',done:false},
+{id:uid(),text:'整理今天的学习笔记',subject:'ma',done:false}
+];
+save()
+}
+c.innerHTML='';
+D.todayTasks.forEach(function(t){
+var sc=t.subject==='cn'?'cn':t.subject==='ma'?'ma':'en';
+var sn=t.subject==='cn'?'语文':t.subject==='ma'?'数学':'英语';
+var d=document.createElement('div');d.className='task-row';
+d.innerHTML='<div class="task-check '+(t.done?'on':'')+'" onclick="togTask(\''+t.id+'\')"></div><span class="task-text '+(t.done?'done':'')+'">'+t.text+'</span><span class="task-tag '+sc+'">'+sn+'</span>';
+c.appendChild(d)
+});
+// add custom task button
+var addBtn=document.createElement('div');addBtn.className='task-row';addBtn.style.cursor='pointer';
+addBtn.innerHTML='<div class="task-check" style="border-style:dashed"></div><span class="task-text" style="color:var(--t3)">+ 添加自定义任务</span>';
+addBtn.onclick=function(){var v=prompt('输入任务内容：');if(v&&v.trim()){D.todayTasks.push({id:uid(),text:v.trim(),subject:'cn',done:false});save();renderTodayTasks();updateRing()}};
+c.appendChild(addBtn)
+}
+function togTask(id){
+var t=D.todayTasks.find(function(x){return x.id===id});if(!t)return;
+t.done=!t.done;save();renderTodayTasks();updateRing();
+if(t.done){confetti();if(D.todayTasks.every(function(x){return x.done})){setTimeout(function(){showEgg('今日任务全部完成！太棒了！')},600)}}
+}
+function updateRing(){
+var done=D.todayTasks.filter(function(t){return t.done}).length;
+var total=D.todayTasks.length;
+var pct=total>0?Math.round(done/total*100):0;
+document.getElementById('ringNum').textContent=pct+'%';
+document.getElementById('ringFg').style.strokeDashoffset=264-(264*pct/100)
+}
+
+/* ===== SUBJECT PAGES ===== */
+function renderSubject(key,weeks,container){
+var wt=document.getElementById(key+'Weeks');
+var lc=document.getElementById(key+'Lessons');
+wt.innerHTML='';
+weeks.forEach(function(w,i){
+var b=document.createElement('button');b.className='wtab'+(i===0?' on':'');
+b.textContent=w.t;b.dataset.idx=i;
+b.onclick=function(){
+document.querySelectorAll('#'+key+'Weeks .wtab').forEach(function(x){x.classList.remove('on')});
+b.classList.add('on');
+renderLessons(key,weeks,i,lc)
+};
+wt.appendChild(b)
+});
+renderLessons(key,weeks,0,lc)
+}
+function renderLessons(key,weeks,wi,lc){
+lc.innerHTML='';
+var dk=key+'Done';
+weeks[wi].lessons.forEach(function(l,li){
+// check unlock: previous lesson must be done
+var unlocked=true;
+if(li>0&&!D[dk][wi+'-'+(li-1)])unlocked=false;
+// also check previous week last lesson
+if(li===0&&wi>0&&!D[dk][(wi-1)+'-'+(weeks[wi-1].lessons.length-1)])unlocked=false;
+var done=D[dk][wi+'-'+li];
+var d=document.createElement('div');d.className='lesson';
+if(!unlocked)d.style.opacity='0.5';
+var ptsHtml=l.pts.map(function(p){return'<li>'+p+'</li>'}).join('');
+var vidHtml='';
+if(l.video){
+var vidText=l.video.replace('bilibili:','在B站搜索：');
+vidHtml='<div class="video-link-btn" onclick="searchVideo(\''+l.video.replace(/'/g,'')+'\')">▶️ '+vidText+'</div>'
+}
+var audioId=key+wi+'-'+li;
+d.innerHTML='<div class="lesson-head"><div class="lesson-num '+key+'">'+(li+1)+'</div><div class="lesson-title">'+l.t+'</div>'+(unlocked?'':(done?'<span style="color:var(--grn)">✓</span>':'<span class="lesson-lock">🔒</span>'))+'</div>';
+if(unlocked){
+d.innerHTML+='<div class="lesson-body"><ul class="lesson-points '+key+'">'+ptsHtml+'</ul>';
+d.innerHTML+='<div class="audio-bar"><button class="play-btn '+key+'" id="pb'+audioId+'" onclick="toggleAudio(\''+audioId+'\',\''+key+'\')">▶</button><div class="audio-info" id="ai'+audioId+'"><span>点击播放讲解音频</span></div><button class="speed-btn" onclick="cycleSpeed()">1.0x</button></div>';
+d.innerHTML+=vidHtml;
+d.innerHTML+='<div class="lesson-task"><div class="task-label">📝 今日任务</div><div class="task-content">'+l.task+'</div></div>';
+d.innerHTML+='<div class="lesson-checkin"><button class="btn-checkin '+key+(done?' done':'')+'" onclick="checkin(\''+key+'\','+wi+','+li+')">'+(done?'✅ 已完成':'打卡完成')+'</button></div>';
+d.innerHTML+='</div>'
+}else{
+d.innerHTML+='<div class="lesson-body"><div style="font-size:13px;color:var(--t3);padding:8px 0">完成前面的课程后解锁 🔒</div></div>'
+}
+// store audio text
+d.querySelector('.play-btn')&&d.querySelector('.play-btn').setAttribute('data-text',l.audio);
+lc.appendChild(d)
+})
+}
+
+/* ===== AUDIO (Web Speech API) ===== */
+var currentAudio=null;
+function toggleAudio(id,key){
+var btn=document.getElementById('pb'+id);
+var info=document.getElementById('ai'+id);
+if(!btn)return;
+var text=btn.getAttribute('data-text');
+if(currentAudio===id){
+window.speechSynthesis.cancel();
+currentAudio=null;
+btn.textContent='▶';
+info.innerHTML='<span>点击播放讲解音频</span>';
+return
+}
+// stop previous
+if(currentAudio){var pb=document.getElementById('pb'+currentAudio);if(pb){pb.textContent='▶';var pi=document.getElementById('ai'+currentAudio);if(pi)pi.innerHTML='<span>点击播放讲解音频</span>'}}
+window.speechSynthesis.cancel();
+var u=new SpeechSynthesisUtterance(text);
+u.lang=key==='en'?'en-US':'zh-CN';
+u.rate=D.audioSpeed||1.0;
+u.onstart=function(){
+currentAudio=id;btn.textContent='⏸';info.innerHTML='<span class="playing">播放中</span><span class="audio-wave"><span></span><span></span><span></span><span></span></span>'
+};
+u.onend=function(){
+currentAudio=null;btn.textContent='▶';info.innerHTML='<span>点击播放讲解音频</span>'
+};
+u.onerror=function(){
+currentAudio=null;btn.textContent='▶';info.innerHTML='<span style="color:var(--red)">播放失败，请重试</span>'
+};
+window.speechSynthesis.speak(u)
+}
+function cycleSpeed(){
+var speeds=[0.8,1.0,1.2,1.5];
+var cur=D.audioSpeed||1.0;
+var idx=speeds.indexOf(cur);
+var next=speeds[(idx+1)%speeds.length];
+D.audioSpeed=next;save();
+document.querySelectorAll('.speed-btn').forEach(function(b){b.textContent=next.toFixed(1)+'x'});
+if(currentAudio){
+var pb=document.getElementById('pb'+currentAudio);if(pb){var text=pb.getAttribute('data-text');var key=pb.className.includes('en')?'en':pb.className.includes('ma')?'ma':'cn';toggleAudio(currentAudio,key);setTimeout(function(){toggleAudio(currentAudio,key)},100)}
+}
+}
+
+/* ===== VIDEO ===== */
+function searchVideo(query){
+var q=query.replace('bilibili:','').trim();
+window.open('https://search.bilibili.com/all?keyword='+encodeURIComponent(q),'_blank')
+}
+function closeVideo(){document.getElementById('videoModal').classList.remove('on');document.getElementById('videoFrame').src=''}
+
+/* ===== CHECKIN ===== */
+function checkin(key,wi,li){
+var dk=key+'Done';
+var id=wi+'-'+li;
+if(D[dk][id]){
+D[dk][id]=false;save();
+renderLessons(key,key==='cn'?CN_WEEKS:key==='ma'?MA_WEEKS:EN_WEEKS,wi,document.getElementById(key+'Lessons'));
+renderHome();return
+}
+D[dk][id]=true;save();
+confetti();
+var total=0,done=0;
+var weeks=key==='cn'?CN_WEEKS:key==='ma'?MA_WEEKS:EN_WEEKS;
+weeks.forEach(function(w,i){w.lessons.forEach(function(l,j){total++;if(D[dk][i+'-'+j])done++})});
+if(done===total){setTimeout(function(){showEgg(key==='cn'?'语文全部完成！太棒了！':key==='ma'?'数学全部完成！太棒了！':'英语全部完成！太棒了！')},500)}
+renderLessons(key,weeks,wi,document.getElementById(key+'Lessons'));
+renderHome()
+}
+
+/* ===== STATS ===== */
+function renderChart(){
+var ctx=document.getElementById('chartSubj');
+if(!ctx)return;
+if(chartObj)chartObj.destroy();
+var cnTotal=0,cnDone=0,maTotal=0,maDone=0,enTotal=0,enDone=0;
+CN_WEEKS.forEach(function(w,i){w.lessons.forEach(function(l,j){cnTotal++;if(D.cnDone[i+'-'+j])cnDone++})});
+MA_WEEKS.forEach(function(w,i){w.lessons.forEach(function(l,j){maTotal++;if(D.maDone[i+'-'+j])maDone++})});
+EN_WEEKS.forEach(function(w,i){w.lessons.forEach(function(l,j){enTotal++;if(D.enDone[i+'-'+j])enDone++})});
+var cnPct=Math.round(cnDone/cnTotal*100),maPct=Math.round(maDone/maTotal*100),enPct=Math.round(enDone/enTotal*100);
+chartObj=new Chart(ctx,{type:'bar',data:{labels:['语文','数学','英语'],datasets:[{label:'完成率%',data:[cnPct,maPct,enPct],backgroundColor:['#6366F1','#F59E0B','#10B981'],borderRadius:8}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true,max:100,ticks:{callback:function(v){return v+'%'}}}}}});
+document.getElementById('weekDone').textContent=cnDone+maDone+enDone+'/'+(cnTotal+maTotal+enTotal);
+document.getElementById('totalRate').textContent=Math.round((cnDone+maDone+enDone)/(cnTotal+maTotal+enTotal)*100)+'%';
+// streak
+var s=0,dt=new Date();
+while(true){var dk=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');var has=D.habits.some(function(h){return h.records[dk]});if(has){s++;dt.setDate(dt.getDate()-1)}else{if(s===0){dt.setDate(dt.getDate()-1);var dk2=dt.getFullYear()+'-'+String(dt.getMonth()+1).padStart(2,'0')+'-'+String(dt.getDate()).padStart(2,'0');if(D.habits.some(function(h){return h.records[dk2]})){continue}}break}}
+document.getElementById('streakBadge').textContent='🔥 '+s+' 天'
+}
+
+/* ===== DATA ===== */
+function exportData(){var b=new Blob([JSON.stringify(D,null,2)],{type:'application/json'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='打卡数据_'+td()+'.json';a.click();toast('数据已导出！')}
+function importData(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(){try{D=JSON.parse(r.result);save();init();toast('数据导入成功！')}catch(err){toast('导入失败：格式错误')}};r.readAsText(f)}
+function resetData(){if(!confirm('确定要重置所有数据吗？\n\n此操作将清除所有打卡记录和学习进度。\n建议先导出数据备份！'))return;if(!confirm('再次确认：真的要重置吗？'))return;localStorage.removeItem(K);D={};load();init();toast('数据已重置！')}
+function showInstallGuide(){document.getElementById('installModal').classList.add('on')}
+
+/* ===== INIT ===== */
+function init(){
+load();
+renderHome();
+renderSubject('cn',CN_WEEKS,'cnLessons');
+renderSubject('ma',MA_WEEKS,'maLessons');
+renderSubject('en',EN_WEEKS,'enLessons')
+}
+init();
+if('serviceWorker' in navigator){navigator.serviceWorker.register('sw.js').then(function(){}).catch(function(e){})}
+</script>
+</body>
+</html>
