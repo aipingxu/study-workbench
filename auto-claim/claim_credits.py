@@ -6,7 +6,7 @@ WorkBuddy 每日积分自动领取脚本
 
 使用方法：
 1. 首次运行（登录）：python claim_credits.py --login
-   会打开浏览器，手动登录 codebuddy.cn，登录后关闭浏览器即可
+   会打开浏览器，自动跳转登录页，登录成功后自动继续
 2. 日常自动运行：python claim_credits.py
    headless 模式，自动检查并领取每日积分
 3. 配合 Windows 任务计划程序，每天定时自动执行
@@ -19,6 +19,7 @@ API 说明：
 import sys
 import os
 import json
+import time
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -32,12 +33,18 @@ BROWSER_DATA_DIR = os.path.expanduser(r"~\.workbuddy\browser-data")
 # codebuddy.cn 地址
 BASE_URL = "https://www.codebuddy.cn"
 
+# 需要登录才能访问的页面（用于检测登录状态）
+PROFILE_URL = "https://www.codebuddy.cn/profile"
+
 # API 路径
 CHECK_API = "/billing/meter/check-gift-claimed"
 CLAIM_API = "/billing/meter/claim-gift"
 
 # 日志文件
 LOG_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "claim_credits.log")
+
+# 登录等待超时（秒）
+LOGIN_TIMEOUT = 300  # 5分钟
 
 # ============================================================
 # 日志配置
@@ -51,6 +58,173 @@ logging.basicConfig(
     ],
 )
 logger = logging.getLogger(__name__)
+
+
+def check_gift_status(page):
+    """检查今日礼包状态，返回 (status_code, data)"""
+    result = page.evaluate("""
+        async () => {
+            try {
+                const resp = await fetch('%s', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: '{}',
+                    credentials: 'include',
+                });
+                const text = await resp.text();
+                let data;
+                try { data = JSON.parse(text); } catch(e) { data = text; }
+                return { status: resp.status, data: data };
+            } catch(e) {
+                return { error: e.toString() };
+            }
+        }
+    """ % CHECK_API)
+    return result.get("status"), result.get("data", {}), result.get("error")
+
+
+def claim_gift(page):
+    """领取今日礼包，返回 (status_code, data)"""
+    result = page.evaluate("""
+        async () => {
+            try {
+                const resp = await fetch('%s', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: '{}',
+                    credentials: 'include',
+                });
+                const text = await resp.text();
+                let data;
+                try { data = JSON.parse(text); } catch(e) { data = text; }
+                return { status: resp.status, data: data };
+            } catch(e) {
+                return { error: e.toString() };
+            }
+        }
+    """ % CLAIM_API)
+    return result.get("status"), result.get("data", {}), result.get("error")
+
+
+def wait_for_login(page, timeout=LOGIN_TIMEOUT):
+    """
+    自动等待用户登录成功。
+    每3秒检查一次API状态，返回200表示已登录。
+    """
+    logger.info("=" * 50)
+    logger.info("等待登录中...")
+    logger.info("请在弹出的浏览器窗口中登录 codebuddy.cn")
+    logger.info(f"超时时间: {timeout}秒 ({timeout//60}分钟)")
+    logger.info("登录成功后会自动继续，无需手动操作")
+    logger.info("=" * 50)
+
+    start = time.time()
+    check_count = 0
+
+    while time.time() - start < timeout:
+        check_count += 1
+        elapsed = int(time.time() - start)
+
+        try:
+            # 先访问 profile 页面，触发登录状态检查
+            page.goto(PROFILE_URL, wait_until="domcontentloaded", timeout=10000)
+            page.wait_for_timeout(1000)
+
+            # 检查API状态
+            status, data, error = check_gift_status(page)
+
+            if status == 200:
+                logger.info(f"✅ 登录成功！(耗时 {elapsed}秒，检查 {check_count} 次)")
+                return True
+            elif status == 401:
+                # 还没登录，继续等待
+                if check_count == 1:
+                    logger.info(f"尚未登录，等待中... (已等 {elapsed}s)")
+                elif check_count % 10 == 0:
+                    logger.info(f"仍在等待登录... (已等 {elapsed}s，检查 {check_count} 次)")
+            else:
+                logger.info(f"API 状态: {status}，继续等待... (已等 {elapsed}s)")
+        except Exception as e:
+            logger.debug(f"检查登录时异常（可继续）: {e}")
+
+        # 等待3秒再检查
+        time.sleep(3)
+
+    logger.error(f"❌ 登录超时（{timeout}秒），请重新运行 --login")
+    return False
+
+
+def do_claim(page):
+    """执行领取流程"""
+    # 检查今日礼包状态
+    logger.info("正在检查今日礼包状态...")
+    status, data, error = check_gift_status(page)
+
+    if error:
+        logger.error(f"❌ API 调用失败: {error}")
+        return False
+
+    logger.info(f"检查结果: status={status}")
+
+    if status == 401:
+        logger.error("❌ 未登录或登录已过期！")
+        logger.error("请运行: python claim_credits.py --login 重新登录")
+        return False
+
+    if status != 200:
+        logger.error(f"❌ API 返回异常状态: {status}")
+        logger.error(f"响应: {data}")
+        return False
+
+    # 检查是否已领取
+    claimed = False
+    if isinstance(data, dict):
+        claimed = (
+            data.get("claimed")
+            or data.get("is_claimed")
+            or data.get("hasClaimed")
+            or data.get("data", {}).get("claimed")
+            or data.get("data", {}).get("is_claimed")
+            or data.get("code") == "already_claimed"
+            or False
+        )
+
+    if claimed:
+        logger.info("✅ 今日积分已领取，无需重复领取")
+        return True
+
+    # 领取积分
+    logger.info("🎁 正在领取今日积分...")
+    status, data, error = claim_gift(page)
+
+    if error:
+        logger.error(f"❌ API 调用失败: {error}")
+        return False
+
+    logger.info(f"领取结果: status={status}")
+
+    if status == 200:
+        if isinstance(data, dict):
+            if data.get("error"):
+                logger.error(f"❌ 领取失败: {data.get('error')}")
+                return False
+            elif data.get("code") == "already_claimed":
+                logger.info("✅ 今日积分已领取（重复领取提示）")
+                return True
+            else:
+                logger.info("✅ 今日积分领取成功！+100 积分")
+                return True
+        else:
+            logger.info("✅ 今日积分领取成功！")
+            return True
+    elif status == 401:
+        logger.error("❌ 未登录或登录已过期！")
+        logger.error("请运行: python claim_credits.py --login 重新登录")
+        return False
+    else:
+        logger.error(f"❌ 领取失败，状态码: {status}")
+        logger.error(f"响应: {data}")
+        return False
 
 
 def run_claim(headed=False):
@@ -74,7 +248,7 @@ def run_claim(headed=False):
             viewport={"width": 1280, "height": 720},
             args=["--disable-blink-features=AutomationControlled"],
         )
-        page = context.new_page()
+        page = context.pages[0] if context.pages else context.new_page()
 
         # 打开 codebuddy.cn
         logger.info(f"正在访问 {BASE_URL} ...")
@@ -82,143 +256,44 @@ def run_claim(headed=False):
             page.goto(BASE_URL, wait_until="domcontentloaded", timeout=20000)
         except Exception as e:
             logger.warning(f"页面加载超时（可继续）: {e}")
+        page.wait_for_timeout(2000)
 
-        page.wait_for_timeout(3000)
-
-        # GUI 模式：等待用户手动登录
         if headed:
-            logger.info("=" * 50)
-            logger.info("请在打开的浏览器窗口中登录 codebuddy.cn")
-            logger.info("登录成功后，请回到这里按回车键继续...")
-            logger.info("=" * 50)
-            input()
-            page.goto(BASE_URL, wait_until="domcontentloaded", timeout=20000)
-            page.wait_for_timeout(3000)
+            # ============================================================
+            # GUI 模式：自动等待用户登录
+            # ============================================================
+            # 先检查是否已经登录（可能之前登录过，cookie还在）
+            logger.info("检查当前登录状态...")
+            status, _, _ = check_gift_status(page)
 
-        # 检查今日礼包状态
-        logger.info("正在检查今日礼包状态...")
-        check_result = page.evaluate("""
-            async () => {
-                try {
-                    const resp = await fetch('%s', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: '{}',
-                        credentials: 'include',
-                    });
-                    const text = await resp.text();
-                    let data;
-                    try { data = JSON.parse(text); } catch(e) { data = text; }
-                    return { status: resp.status, data: data };
-                } catch(e) {
-                    return { error: e.toString() };
-                }
-            }
-        """ % CHECK_API)
-
-        logger.info(f"检查结果: {json.dumps(check_result, ensure_ascii=False, indent=2)}")
-
-        # 处理检查结果
-        status = check_result.get("status")
-        data = check_result.get("data", {})
-
-        if status == 401:
-            logger.error("❌ 未登录或登录已过期！")
-            logger.error("请运行: python claim_credits.py --login 重新登录")
-            context.close()
-            return False
-
-        if status != 200:
-            logger.error(f"❌ API 返回异常状态: {status}")
-            logger.error(f"响应: {data}")
-            context.close()
-            return False
-
-        # 检查是否已领取
-        # 根据返回数据判断是否已领取
-        claimed = False
-        if isinstance(data, dict):
-            # 尝试多种可能的字段名
-            claimed = (
-                data.get("claimed")
-                or data.get("is_claimed")
-                or data.get("hasClaimed")
-                or data.get("data", {}).get("claimed")
-                or data.get("data", {}).get("is_claimed")
-                or data.get("code") == "already_claimed"
-                or False
-            )
-
-        if claimed:
-            logger.info("✅ 今日积分已领取，无需重复领取")
-            context.close()
-            return True
-
-        # 领取积分
-        logger.info("🎁 正在领取今日积分...")
-        claim_result = page.evaluate("""
-            async () => {
-                try {
-                    const resp = await fetch('%s', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: '{}',
-                        credentials: 'include',
-                    });
-                    const text = await resp.text();
-                    let data;
-                    try { data = JSON.parse(text); } catch(e) { data = text; }
-                    return { status: resp.status, data: data };
-                } catch(e) {
-                    return { error: e.toString() };
-                }
-            }
-        """ % CLAIM_API)
-
-        logger.info(f"领取结果: {json.dumps(claim_result, ensure_ascii=False, indent=2)}")
-
-        claim_status = claim_result.get("status")
-        claim_data = claim_result.get("data", {})
-
-        if claim_status == 200:
-            # 检查领取是否成功
-            success = False
-            if isinstance(claim_data, dict):
-                success = (
-                    claim_data.get("success", True)
-                    and claim_data.get("code") != "already_claimed"
-                    and claim_data.get("error") is None
-                )
-                # 如果有 error 字段，说明领取失败
-                if claim_data.get("error"):
-                    success = False
-                    logger.error(f"❌ 领取失败: {claim_data.get('error')}")
-                elif claim_data.get("code") == "already_claimed":
-                    logger.info("✅ 今日积分已领取（重复领取提示）")
-                    success = True
-                else:
-                    logger.info("✅ 今日积分领取成功！+100 积分")
-                    success = True
+            if status == 200:
+                logger.info("✅ 已处于登录状态，无需重新登录")
             else:
-                logger.info("✅ 今日积分领取成功！")
-                success = True
+                logger.info(f"当前未登录（status={status}），开始等待登录...")
+                # 尝试导航到 profile 页面，触发登录跳转
+                try:
+                    page.goto(PROFILE_URL, wait_until="domcontentloaded", timeout=15000)
+                except Exception:
+                    pass
 
+                # 自动等待登录
+                if not wait_for_login(page):
+                    logger.error("登录失败，退出")
+                    context.close()
+                    return False
+
+            # 登录成功后，执行领取
+            logger.info("")
+            success = do_claim(page)
             context.close()
             return success
-        elif claim_status == 401:
-            logger.error("❌ 未登录或登录已过期！")
-            logger.error("请运行: python claim_credits.py --login 重新登录")
-            context.close()
-            return False
         else:
-            logger.error(f"❌ 领取失败，状态码: {claim_status}")
-            logger.error(f"响应: {claim_data}")
+            # ============================================================
+            # Headless 模式：直接尝试领取
+            # ============================================================
+            success = do_claim(page)
             context.close()
-            return False
+            return success
 
 
 def main():
