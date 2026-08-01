@@ -1,7 +1,7 @@
 @echo off
 REM ============================================================
 REM   WorkBuddy Daily Credits Auto-Claim Setup
-REM   Windows Task Scheduler installer
+REM   Windows Task Scheduler installer (12:00 + login trigger)
 REM ============================================================
 
 setlocal enabledelayedexpansion
@@ -45,24 +45,29 @@ if errorlevel 1 (
 echo Playwright ready.
 echo.
 
-REM --- Step 2: Create Windows task ---
+REM --- Step 2: Create Windows task (12:00 daily + login trigger) ---
 echo [2/4] Creating Windows scheduled task...
-set "TASK_NAME=WorkBuddy_DailyCredits"
-set "TASK_TIME=09:00"
+echo   - Trigger 1: Daily at 12:00
+echo   - Trigger 2: On user login (missed-day catch-up)
+echo.
 
-schtasks /delete /tn "%TASK_NAME%" /f >nul 2>&1
+powershell -NoProfile -Command ^
+  "$python='%PYTHON%'; $script='%SCRIPT%';" ^
+  "$action=New-ScheduledTaskAction -Execute $python -Argument ('\"'+$script+'\"');" ^
+  "$t1=New-ScheduledTaskTrigger -Daily -At '12:00';" ^
+  "$t2=New-ScheduledTaskTrigger -AtLogOn -User 'WeTrial';" ^
+  "$s=New-ScheduledTaskSettingsSet -StartWhenAvailable -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 10);" ^
+  "Register-ScheduledTask -TaskName 'WorkBuddy_DailyCredits' -Action $action -Trigger @($t1,$t2) -Settings $s -User 'WeTrial' -Description 'WorkBuddy daily credits 12:00 + login' -Force | Out-Null;" ^
+  "Write-Output 'Task created successfully'"
 
-REM Build command line as a single string
-set "CMD_LINE=\"%PYTHON%\" \"%SCRIPT%\""
-
-schtasks /create /tn "%TASK_NAME%" /tr "%CMD_LINE%" /sc daily /st %TASK_TIME% /f
 if errorlevel 1 (
     echo [ERROR] Failed to create scheduled task.
     echo Try running this script as Administrator.
     pause
     exit /b 1
 )
-echo Scheduled task created: daily at %TASK_TIME%
+echo.
+echo Scheduled task created: daily at 12:00 + login catch-up
 echo.
 
 REM --- Step 3: First-time login ---
@@ -84,12 +89,12 @@ echo ============================================================
 echo   All set!
 echo ============================================================
 echo.
-echo - Daily at %TASK_TIME%, auto-claim 100 credits
+echo - Daily at 12:00, auto-claim 100 credits
+echo - On login: catch-up if 12:00 was missed
 echo - No need to open WorkBuddy, runs in background
 echo - Log file: %~dp0claim_credits.log
 echo - Re-login:  "%PYTHON%" "%SCRIPT%" --login
 echo - Manual run: "%PYTHON%" "%SCRIPT%"
-echo - Remove task: schtasks /delete /tn "%TASK_NAME%" /f
 echo.
 pause
 endlocal
